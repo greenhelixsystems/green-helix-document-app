@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+tests/.work/
+dist/
+.DS_Store
