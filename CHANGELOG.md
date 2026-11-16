@@ -7,7 +7,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 First public release.
 
 ### Changed in the move to 1.0
-- The format now has its public name, **Helix**, and its own extension, **`.helix.html`**. Files made during development used `.hlx.html` and `"format":"hlx"`.
+- The format now has its public name, **Helix**, and its own extension, **`.helix.html`**.
 - The format's public version is **1**. The numbers used during development (5 to 9) were pre-release.
 - The command-line tool is now `helix.py`, and the guide is `HELIX-guide.md`.
 - Opening an old file in the editor and choosing *Download copy* suggests the new `.helix.html` name.
