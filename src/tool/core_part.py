@@ -513,6 +513,8 @@ def load_data(data, find, ids=None):
         b64 = el["b64"]
         pad = 2 if b64[-2:] == "==" else 1 if b64[-1:] == "=" else 0
         a = {"name": _s(m.get("name")) or el.get("hint") or "file", "type": clean_type(el["type"]), "b64": b64, "bytes": len(b64) * 3 // 4 - pad}
+        if "sha" in el:  # light reads (outline, get, diff) know the fingerprint and size without the bytes
+            a["sha"], a["bytes"] = el["sha"], el["bytes"]
         assets[nid] = a
         if m.get("sha256") and fingerprint(a) != m.get("sha256"):
             state["bad"].append(a["name"])

@@ -470,6 +470,35 @@ def build_doc_from_spec(spec, base_dir=".", shrink=True, today=None, now=None):
     if spec.get("format") == "helix" and isinstance(spec.get("version"), (int, float)) and not isinstance(spec.get("version"), bool) and spec["version"] > FORMAT_VERSION:
         raise ValueError("this spec says format version %s, newer than this tool (version %d)" % (spec["version"], FORMAT_VERSION))
     ids = IdMaker(_s(spec.get("title")))
+    # Specs may name blocks and tabs with friendly ids ("budget"). Give them real ids and point AI Notes at those.
+    ref, used = {}, set()
+
+    def fix(obj):
+        i = obj.get("id")
+        if isinstance(i, str) and re.fullmatch(r"a[a-z0-9]{6,24}", i) and i not in used:
+            used.add(i)
+            return
+        n = ids.next()
+        while n in used:
+            n = ids.next()
+        if isinstance(i, str) and i and i not in ref:
+            ref[i] = n
+        obj["id"] = n
+        used.add(n)
+    for t in spec.get("tabs") or []:
+        if isinstance(t, dict):
+            fix(t)
+            for b in (t.get("blocks") if isinstance(t.get("blocks"), list) else []):
+                if isinstance(b, dict):
+                    fix(b)
+    remap = lambda v: [ref.get(x, x) if isinstance(x, str) else x for x in v] if isinstance(v, list) else v
+    if isinstance(spec.get("ai"), dict):
+        ai = dict(spec["ai"])
+        for k in ("focus", "protect"):
+            ai[k] = remap(ai.get(k))
+        if isinstance(ai.get("work"), dict):
+            ai["work"] = dict(ai["work"], targets=remap(ai["work"].get("targets")), sources=remap(ai["work"].get("sources")))
+        spec["ai"] = ai
     raw_rev = spec.get("rev") if isinstance(spec.get("rev"), dict) else {}
     had = _match(_HASH, raw_rev.get("hash"))
     doc, assets, missing, _bad = load_data(spec, lambda i: by_id.get(i), ids)
@@ -540,6 +569,19 @@ def check_document(text):
     size = len(text.encode("utf-8"))
     if size > LIMIT:
         problems.append("the file is %s, over the 25 MB limit" % fmt_size(size))
+    if data.get("format") == "helix" and isinstance(data.get("version"), (int, float)) and not isinstance(data.get("version"), bool) and data["version"] > FORMAT_VERSION:
+        notes.append("format version %s is newer than this tool, so only the safety checks apply; it can be read but not patched" % data["version"])
+    if data.get("format") == "helix" and data.get("spec"):
+        stored = data.get("rev").get("hash") if isinstance(data.get("rev"), dict) else None
+        try:
+            normalised = json.loads(_js_json(data_block(doc, assets))) != data
+        except Exception:
+            normalised = True
+        if not (isinstance(stored, str) and re.fullmatch(_HASH, stored)):
+            notes.append("no revision hash saved; tools add one when they next write the file")
+        elif stored != content_hash(doc, assets):
+            msg = "the content does not match its revision hash: it was changed by hand or by software that does not record revisions"
+            (notes if normalised else problems).append(msg + (" (the data block was also normalised when read)" if normalised else ""))
     if r.generator == GENERATOR:
         date = doc["options"]["footer"]["date"]
         try:
@@ -581,6 +623,22 @@ USAGE = """helix.py - build, unpack and check Helix documents (single-file, scri
   python helix.py md notes.md
       Print the HTML that a Markdown block would produce for this file.
 
+Working in small pieces (for AI assistants; output is JSON):
+  python helix.py outline document.helix.html
+      Id, revision, AI Notes, recent log and an outline of every block. Reads only the data block, never attachments.
+  python helix.py get document.helix.html ID [ID...] [--focus] [--md]
+      The full content of the blocks or tabs named (or the AI Notes focus), with the base hash a patch needs.
+  python helix.py asset document.helix.html ID output-file
+      Write one attachment to a file after checking its fingerprint.
+  python helix.py patch document.helix.html patch.json [-o out.helix.html] [--allow-protected] [--force] [--as-human]
+      Apply targeted changes by id. Refuses stale bases and protected sections; writes Name_vX.Y.helix.html.
+  python helix.py diff old.helix.html new.helix.html [--brief]
+      What changed between two revisions, block by block.
+  python helix.py check document.helix.html --json
+      The checks above as JSON.
+  python helix.py return-check return.json [--doc returned.helix.html] [--base original.helix.html]
+      Validate an AI's return against the original and the returned file.
+
 Standard library only. Photos in Images blocks are scaled to 1600 px if Pillow is installed (--no-shrink to keep them).
 """
 
@@ -590,12 +648,25 @@ def main(argv):
         sys.stdout.write(USAGE)
         return 0
     cmd = argv[1]
-    args = [a for a in argv[2:] if not a.startswith("--")]
-    flags = [a for a in argv[2:] if a.startswith("--")]
+    rest = argv[2:]
+    opts = {}
+    for k in ("-o", "--doc", "--base", "--now"):
+        if k in rest:
+            i = rest.index(k)
+            if i + 1 >= len(rest):
+                print("PROBLEM: %s needs a value" % k)
+                return 2
+            opts[k] = rest[i + 1]
+            del rest[i:i + 2]
+    args = [a for a in rest if not a.startswith("--")]
+    flags = [a for a in rest if a.startswith("--")]
+
+    def emit(obj):
+        sys.stdout.write(json.dumps(obj, ensure_ascii=False, indent=1) + "\n")
     try:
         if cmd == "build" and len(args) == 2:
             spec = json.load(open(args[0], encoding="utf-8"))
-            html, problems = build_from_spec(spec, os.path.dirname(os.path.abspath(args[0])), "--no-shrink" not in flags)
+            html, problems = build_from_spec(spec, os.path.dirname(os.path.abspath(args[0])), "--no-shrink" not in flags, None, opts.get("--now"))
             for p in problems:
                 print("PROBLEM: " + p)
             if problems:
@@ -615,6 +686,38 @@ def main(argv):
                 print("WARNING: %s does not match its saved fingerprint" % b)
             print("OK: wrote content.md, spec.json and %d file(s) to %s" % (res["files"], args[1]))
             return 1 if res["bad"] or res["missing"] else 0
+        if cmd == "check" and len(args) == 1 and "--json" in flags:
+            problems, notes = check_document(open(args[0], encoding="utf-8").read())
+            emit({"ok": not problems, "problems": problems, "notes": notes})
+            return 1 if problems else 0
+        if cmd == "outline" and len(args) == 1:
+            emit(outline(args[0]))
+            return 0
+        if cmd == "get" and len(args) >= 1:
+            res = get_blocks(args[0], args[1:], "--focus" in flags, "--md" in flags)
+            if isinstance(res, str):
+                sys.stdout.write(res)
+            else:
+                emit(res)
+            return 0
+        if cmd == "asset" and len(args) == 3:
+            emit(extract_asset(args[0], args[1], args[2]))
+            return 0
+        if cmd == "patch" and len(args) == 2:
+            patch = json.load(open(args[1], encoding="utf-8"))
+            if not isinstance(patch, dict):
+                raise ValueError("the patch file must hold a JSON object")
+            emit(patch_document(args[0], patch, os.path.dirname(os.path.abspath(args[1])), opts.get("-o"),
+                                "--allow-protected" in flags, "--force" in flags, "--as-human" in flags, opts.get("--now")))
+            return 0
+        if cmd == "diff" and len(args) == 2:
+            emit(diff_documents(args[0], args[1], "--brief" in flags))
+            return 0
+        if cmd == "return-check" and len(args) == 1:
+            env = json.load(open(args[0], encoding="utf-8"))
+            res = check_return(env, opts.get("--doc"), opts.get("--base"), os.path.dirname(os.path.abspath(args[0])))
+            emit(res)
+            return 0 if res["ok"] else 1
         if cmd == "check" and len(args) == 1:
             problems, notes = check_document(open(args[0], encoding="utf-8").read())
             for p in problems:

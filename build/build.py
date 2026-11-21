@@ -133,8 +133,9 @@ Editor can reopen it. This tool makes and reads those files without the editor.
     python helix.py unpack document.helix.html outfolder
     python helix.py check document.helix.html
     python helix.py md notes.md
+    python helix.py outline | get | asset | patch | diff | return-check ...   (run with no arguments for details)
 
-Format version %d. Standard library only (Pillow is optional, for scaling large photos).
+Format version %d (Helix %s). Standard library only (Pillow is optional, for scaling large photos).
 Licensed under the Apache License 2.0. "Green Helix" and its logo are not licensed; see NOTICE.md.
 """
 import re
@@ -153,8 +154,8 @@ ABOUT_AI = %s
 ABOUT_JSON = %s
 DOC_CSS = %s
 
-''' % (ver, ver, lit(gen), lit(C["DOC_CSP"]), lit(C["ACCENTS"]), lit(C["STATUS"]), lit(C["TONES"]), lit(C["SPEC"]), lit(C["LABEL"]), lit(C["WORK"]), lit(C["KINDS"]), lit(C["ABOUT_AI"]), lit(C["ABOUT_JSON"]), lit(C["DOC_CSS"]))
-parts = [rd(P("src", "tool", "%s_part.py" % n)) for n in ("md", "html", "core", "cli")]
+''' % (ver, C["SPEC"], ver, lit(gen), lit(C["DOC_CSP"]), lit(C["ACCENTS"]), lit(C["STATUS"]), lit(C["TONES"]), lit(C["SPEC"]), lit(C["LABEL"]), lit(C["WORK"]), lit(C["KINDS"]), lit(C["ABOUT_AI"]), lit(C["ABOUT_JSON"]), lit(C["DOC_CSS"]))
+parts = [rd(P("src", "tool", "%s_part.py" % n)) for n in ("md", "html", "core", "ai", "cli")]
 tool = (tool_head + "\n\n".join(parts)).replace("\n\n\n\n", "\n\n\n")
 assert all(ord(c) < 128 for c in tool)
 emit("tools/helix.py", tool)
