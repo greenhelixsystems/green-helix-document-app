@@ -2,6 +2,38 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [semantic versioning](https://semver.org/).
 
+## [1.1.0] - unreleased
+
+AI-native documents: identity, revisions, AI Notes and work handoffs. The format stays version 1 (every 1.0 file is a valid 1.1 file); the data block now says `"spec": "1.1"`.
+
+### Format
+- **Document identity and revisions.** `id` (permanent), `rev` (`n`, the visible `label` such as `1.1`, a content `hash` and the `parent` hash), `created`, `modified` and an optional `source`.
+- **AI Notes** (`ai`): `notes` (Markdown), `focus` and `protect` (block or tab ids), and an optional assignment `work` (task, stage, role, assignee, status, objective, instructions, targets, sources, deliverables, definition of done, review, base). Placed near the top of the data block so readers meet it first.
+- **Revision Log** (`log`): who changed what and when, which blocks, the status they claim and the checks run. Statuses separate claims (`submitted`, `validated`) from review and approval, which a patch or return can never record.
+- The visible page shows **AI Notes** and **Revision Log** as collapsed buttons under the title, never printed. Documents without them look as before (apart from a Revision Log button once a version is recorded).
+- The "About this file" note now tells AI assistants to read the AI Notes first, read only the focus unless asked for a full review, and how to record a revision.
+- A file whose data changed without a new revision fails `check`.
+- Files with a newer `version` are refused by the editor and cannot be patched (they can still be read).
+
+### Editor
+- AI Notes box under the title: notes, plus a Focus / Do-not-change tick for every section. Assignments from other apps are kept and shown.
+- Revision Log box: the history, a note for the next save, a major-version option and *Start a new version on the next save*.
+- Saving changed content records one revision per editing session and names the file `Title_v1.1.helix.html`. Saving unchanged content keeps the revision. When the version changes, the editor asks where to save rather than overwriting the previous version.
+
+### helix.py
+- New commands: `outline` and `get` (read only the data block, never attachments; `get --focus` returns just the focus with the base hash), `asset`, `patch` (set, insert, delete, move, ai, title, attach; conflict detection, protected sections, automatic version and log entry), `diff`, `check --json` and `return-check`.
+- `unpack` keeps every id and the revision record; `build` of an unchanged unpacked spec gives an identical file, and a changed one becomes the next revision.
+- Specs may give blocks friendly ids (`"budget"`) for AI Notes to point at; `build` maps them to real ids. `by` and `kind` record who created the document; `--now` makes builds reproducible.
+
+### Guides and examples
+- `HELIX-WORKFLOW.md` (a two-page customisable template for AI workflows) and `HELIX-QUICKSTART.md` (one screen).
+- The guide gains section 3A (revising with AI Notes, focus and patches), 3B (the return envelope), a mapping for project and workflow data, and how other apps can write Helix files.
+- `examples/project-handoff/`: a project built by one AI, revised by another and handed back.
+
+### Compatibility
+- 1.0 files open, check and save normally; the first save that changes content gives them an id and version 1.1. Pre-1.0 `.hlx.html` files still open.
+- Software older than 1.1 does not know the new fields and drops them if it saves a 1.1 file.
+
 ## [1.0.0] - 2026-11-16
 
 First public release.

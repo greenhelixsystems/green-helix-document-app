@@ -1,0 +1,55 @@
+{
+ "helixPatch": 1,
+ "doc": "hx-0e1a5c9f3b7d2468",
+ "base": "94f62f4aae6bd39a4d0d466c8129bf635524210e8e47bdb8844d3bbb3e2816ef",
+ "ops": [
+  {
+   "op": "set",
+   "id": "a843e5dbc0015",
+   "rows": [
+    [
+     "Item",
+     "Estimate ($)"
+    ],
+    [
+     "Raised bed lumber",
+     "640"
+    ],
+    [
+     "Soil and compost",
+     "420"
+    ],
+    [
+     "Water line and timer",
+     "310"
+    ],
+    [
+     "Tools and storage box",
+     "260"
+    ],
+    [
+     "Signage",
+     "90"
+    ],
+    [
+     "Contingency (10%)",
+     "172"
+    ],
+    [
+     "Total",
+     "1,892"
+    ]
+   ]
+  },
+  {
+   "op": "ai",
+   "notes_append": "## From the reviewer AI (v1.1)\n\nAdded a 10% contingency and a total to the budget. Open question: does the water line estimate include the 40 ft run in the site notes?"
+  }
+ ],
+ "log": {
+  "by": "Reviewer AI",
+  "kind": "ai",
+  "summary": "Added contingency and total to the budget",
+  "status": "submitted"
+ }
+}

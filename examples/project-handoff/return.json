@@ -1,0 +1,25 @@
+{
+ "helixReturn": 1,
+ "task": "GARDEN-7",
+ "doc": "hx-0e1a5c9f3b7d2468",
+ "base": "94f62f4aae6bd39a4d0d466c8129bf635524210e8e47bdb8844d3bbb3e2816ef",
+ "result": "a75b814597ceb4ce3f8d43c2893a8f6ce562a4bfe20cb60c0961096b5b24bea4",
+ "file": "Community-Garden-Launch_v1.1.helix.html",
+ "summary": "Added a 10% contingency and a total to the budget.",
+ "blocks": [
+  "a843e5dbc0015"
+ ],
+ "outputs": [],
+ "checks": [
+  {
+   "name": "helix check",
+   "result": "pass"
+  }
+ ],
+ "questions": [
+  "Does the water line estimate include the 40 ft run?"
+ ],
+ "next": "The project lead confirms the water line estimate.",
+ "humanReview": true,
+ "status": "submitted"
+}

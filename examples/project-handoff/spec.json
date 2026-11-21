@@ -1,0 +1,42 @@
+{
+ "id": "hx-0e1a5c9f3b7d2468",
+ "title": "Community Garden Launch",
+ "subtitle": "Project plan, budget and site files",
+ "by": "Planner AI",
+ "kind": "ai",
+ "ai": {
+  "notes": "## Purpose\n\nA plan to open a 12-bed community garden by spring. Readers are the volunteer committee.\n\n## For the next AI\n\n- Review and complete the **Budget** only. Use the attached budget.csv and site notes as sources.\n- Keep the **Goal** exactly as written: the committee approved it.\n- Keep entries short. Put open questions at the end of these notes.",
+  "focus": ["budget"],
+  "protect": ["goal"],
+  "work": {
+   "task": "GARDEN-7",
+   "stage": "budget review",
+   "role": "reviewer",
+   "assignee": "Reviewer AI",
+   "status": "assigned",
+   "objective": "A complete, sourced budget the committee can approve.",
+   "targets": ["budget"],
+   "sources": ["files"],
+   "instructions": "Check each line against budget.csv. Add a contingency line and a total.",
+   "deliverables": ["Updated Budget table"],
+   "done": ["Every line has an amount", "Contingency and total rows present"],
+   "review": "The project lead checks the totals before the committee meeting."
+  }
+ },
+ "options": {"status": "draft", "toc": true, "fingerprints": true},
+ "blocks": [
+  {"id": "goal", "type": "callout", "tone": "important", "title": "Goal", "text": "Open 12 raised beds to members by 1 May, within a $2,000 budget."},
+  {"type": "table", "title": "Project details", "half": true, "rows": [["Detail", "Value"], ["Status", "Planning"], ["Lead", "Volunteer committee"], ["Target date", "1 May"]]},
+  {"type": "markdown", "title": "Summary", "half": true, "md": "Two phases: **prepare the site**, then **build and open**. The water line is the main risk."},
+  {"type": "heading", "text": "Phase 1: Prepare the site"},
+  {"type": "checklist", "title": "Checklist", "items": [{"text": "Confirm the lease with the landowner", "done": true}, {"text": "Mark out the beds", "done": false}, {"text": "Book the water line installer", "done": false}]},
+  {"type": "markdown", "title": "1. Confirm the lease", "md": "Signed for three years. A copy is with the treasurer."},
+  {"type": "markdown", "title": "2. Mark out the beds", "md": "Twelve beds of 4 x 8 ft, with 3 ft paths. Keep the compost bins away from the east fence (see the site notes)."},
+  {"type": "markdown", "title": "3. Book the water line installer", "md": "Run from the north fence hookup. Ask for a quote that includes a backflow valve."},
+  {"type": "heading", "text": "Phase 2: Build and open"},
+  {"type": "table", "title": "Tasks", "rows": [["Task", "Owner", "Status", "Target"], ["Build raised beds", "Build team", "Not started", "15 Apr"], ["Fill with soil and compost", "Build team", "Not started", "22 Apr"], ["Open day", "Committee", "Not started", "1 May"]]},
+  {"id": "budget", "type": "table", "title": "Budget", "rows": [["Item", "Estimate ($)"], ["Raised bed lumber", "640"], ["Soil and compost", "420"], ["Water line and timer", "310"], ["Tools and storage box", "260"], ["Signage", "90"]]},
+  {"type": "markdown", "title": "Links", "md": "- [Municipal garden guidelines](https://example.org/garden-guidelines)\n- [Volunteer sign-up](https://example.org/volunteer)"},
+  {"id": "files", "type": "files", "title": "Files", "items": [{"file": "inputs/budget.csv", "note": "Budget estimates with notes"}, {"file": "inputs/site-notes.txt", "note": "Site visit notes"}]}
+ ]
+}

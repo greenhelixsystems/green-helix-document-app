@@ -2,6 +2,7 @@ import hashlib, json, os, re, zipfile
 from playwright.sync_api import sync_playwright
 
 from common import *
+short_ver = ".".join(open(os.path.join(str(ROOT), "VERSION")).read().strip().split(".")[:2])
 T = work("v8")
 os.makedirs(T, exist_ok=True)
 LOGO = INPUTS + "/logo.png"
@@ -147,7 +148,7 @@ with sync_playwright() as p:
     check("no event handlers or javascript: urls anywhere in the saved document", not sc.bad, sc.bad)
     check("only the logo is an img, only the data block is a script", sc.tags.get("img") == 1 and sc.tags.get("script") == 1, sc.tags)
     check("favicon / logo header present", '<header class="head">' in html and 'class="logo"' in html and 'class="status st-review">For review</p>' in html)
-    check("generator says 1.0", 'content="Green Helix Document Editor 1.0"' in html)
+    check("generator says " + short_ver, ('content="Green Helix Document Editor %s"' % short_ver) in html)
 
     # ---------------------------------------------------------------- re-open in the editor, re-save, compare bytes
     page.evaluate("t=>window.__pde.load(t)", html)
@@ -211,7 +212,7 @@ with sync_playwright() as p:
               miss == 0 and raw()["doc"]["options"]["status"] == "" and raw()["doc"]["options"]["logo"] == "",
               olds[0])
         nostyle = lambda x: re.sub(r"<style>.*?</style>", "<style></style>", x, flags=re.S)
-        body = lambda x: re.sub(r"\n\n+", "\n", re.sub(r'<script type="application/json" id="doc-source">.*?</script>', "", nostyle(x), flags=re.S)).replace("Editor 6", "Editor X").replace("Editor 1.0", "Editor X")
+        body = lambda x: re.sub(r"\n\n+", "\n", re.sub(r'<script type="application/json" id="doc-source">.*?</script>', "", nostyle(x), flags=re.S)).replace("Editor 6", "Editor X").replace("Editor 1.0", "Editor X").replace("Editor 1.1", "Editor X")
         check("  ...and the visible document is identical (style and data block aside)", body(old) == body(h3), (len(body(old)), len(body(h3))))
 
     # ---------------------------------------------------------------- phone layout of the editor

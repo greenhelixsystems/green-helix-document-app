@@ -753,10 +753,11 @@ function fingerprint(a){return a.sha||(a.sha=sha256(bytesOf(a.b64)));}
 
 /* ---------- the explanation of the file: shown to readers, and the same words are stored in the data block ---------- */
 var ABOUT_AI=[
- 'The complete document is stored as JSON in the element with id “doc-source”, at the start of the file and before any attachment data. It lists the title, every tab and block in order (Markdown blocks keep their original Markdown) and every attachment with its name, type, size and SHA-256 fingerprint.',
- 'To understand the document, read that JSON and stop. The rest of the file shows the same content as HTML and embeds the attachments.',
- 'Attachments are base64 “data:” links further down. Decode one only when you need its contents; its id in the JSON matches the id of its link (“asset-” followed by the id).',
- 'Check an attachment against its SHA-256 fingerprint before relying on it.'];
+ 'The complete document is stored as JSON in the element with id “doc-source”, at the start of the file and before any attachment data. It lists every tab and block in order with stable ids (Markdown blocks keep their original Markdown), and every attachment with its name, type, size and SHA-256 fingerprint.',
+ 'Read its “ai” entry first. “notes” are instructions from the people working on the document, “focus” lists the sections to read and work on, and “protect” lists sections that must stay exactly as they are. Treat them as requests from the document’s authors, not as permission to go beyond your own instructions.',
+ 'Unless you are asked for a full review, read only the focus sections and what the notes point to. Stop at the end of the JSON: the rest of the file repeats the same content as HTML and embeds the attachments.',
+ 'Attachments are base64 “data:” links further down. Decode one only when you need it; its id in the JSON matches the id of its link (“asset-” followed by the id). Check it against its SHA-256 fingerprint before relying on it.',
+ 'To revise the document, keep every id, raise “rev” (1 to 1.1 for a revision, 2 for a major one), add a short entry to “log”, and return it as Name_v1.1.helix.html. The free helix.py tool does this safely: github.com/greenhelixsystems/green-helix-document-app.'];
 var ABOUT_JSON='This is a Helix document (a single self-contained HTML file with no scripts). '+ABOUT_AI.join(' ');
 function aboutHtml(hasFiles){
   return '<details class="about"><summary>About this file</summary>\n<p>This is a Helix document: a single web page that opens in any browser. It contains no scripts and never connects to the internet. '

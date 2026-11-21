@@ -154,6 +154,24 @@ plain = cli("build", "plain.json", "plain.helix.html") if json.dump({"title": "P
 ph = read(T + "/plain.helix.html")
 check("a document without AI Notes has no AI Notes button", "<summary>AI Notes</summary>" not in ph and '"ai":' not in ph and "Revision Log" in ph)
 
+
+# ---------------------------------------------------------------- hostile content stays inert
+evil = '</script><script>alert(1)</script><img src=x onerror=alert(2)> [x](javascript:alert(3)) <details open>'
+json.dump({"title": "Evil", "by": evil, "ai": {"notes": evil, "work": {"task": evil, "instructions": evil, "deliverables": [evil]}},
+           "log": [{"rev": 1, "label": "1", "by": evil, "summary": evil, "note": evil}], "blocks": [{"type": "markdown", "title": "T", "md": "x"}]}, open(T + "/evil.json", "w"))
+r = cli("build", "evil.json", "evil.helix.html")
+eh = read(T + "/evil.helix.html") if r.returncode == 0 else ""
+check("hostile AI Notes, assignment and log text build into a file that passes check", r.returncode == 0 and hx.check_document(eh)[0] == [], r.stdout)
+from html.parser import HTMLParser
+class Scan(HTMLParser):
+    bad = []
+    def handle_starttag(self, tag, attrs):
+        for k, v in attrs:
+            if k.startswith("on") or (k in ("href", "src") and (v or "").lower().startswith("javascript")): self.bad.append((tag, k))
+        if tag in ("script", "img", "iframe", "details") and tag != "details" and dict(attrs).get("id") != "doc-source" and tag == "script": self.bad.append(("script", ""))
+sc = Scan(); sc.feed(eh)
+check("...and parsed as HTML it has no extra scripts, event handlers or javascript: links", eh and not sc.bad and eh.count("<script") == 1, sc.bad)
+
 # ---------------------------------------------------------------- the editor
 with sync_playwright() as p:
     b = launch(p)

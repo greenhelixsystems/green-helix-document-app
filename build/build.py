@@ -163,14 +163,18 @@ emit("tools/helix.py", tool)
 # ---------------------------------------------------------------- guide
 names = {"green": "white", "gold": "dark", "crimson": "white", "plum": "white", "slate": "white"}
 rows = "\n".join("| %s | `%s` | %s | `%s` |" % (k, v[1], names[k], v[3]) for k, v in C["ACCENTS"].items())
-g = rd(P("src", "guide.tpl.md")).replace("__VERSION__", str(ver)).replace("__EDITOR__", SHORT).replace("__GENERATOR__", gen).replace("__ACCENT_ROWS__", rows).replace("__SCRIPT__", tool.rstrip("\n"))
+g = rd(P("src", "guide.tpl.md")).replace("__VERSION__", str(ver)).replace("__SPEC__", C["SPEC"]).replace("__EDITOR__", SHORT).replace("__GENERATOR__", gen).replace("__ACCENT_ROWS__", rows).replace("__SCRIPT__", tool.rstrip("\n"))
 emit("guide/HELIX-guide.md", g)
+for src_name, out_name in (("workflow.tpl.md", "HELIX-WORKFLOW.md"), ("quickstart.tpl.md", "HELIX-QUICKSTART.md")):
+    emit("guide/" + out_name, rd(P("src", src_name)).replace("__SPEC__", C["SPEC"]))
 
 # ---------------------------------------------------------------- release files
 dist = {}
 dist["dist/green-helix-document-editor-%s.html" % VERSION] = OUTPUTS["editor/green-helix-document-editor.html"]
 dist["dist/helix.py"] = OUTPUTS["tools/helix.py"]
 dist["dist/HELIX-guide.md"] = OUTPUTS["guide/HELIX-guide.md"]
+dist["dist/HELIX-WORKFLOW.md"] = OUTPUTS["guide/HELIX-WORKFLOW.md"]
+dist["dist/HELIX-QUICKSTART.md"] = OUTPUTS["guide/HELIX-QUICKSTART.md"]
 zbuf = io.BytesIO()
 with zipfile.ZipFile(zbuf, "w", zipfile.ZIP_DEFLATED) as z:
     for rel in sorted(k for k in OUTPUTS if k.startswith("mobile/")):

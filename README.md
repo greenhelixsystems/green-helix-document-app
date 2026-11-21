@@ -4,7 +4,7 @@ Make one file that holds a whole deliverable: written sections, tables, checklis
 
 These files are called **Helix documents** and end in `.helix.html`. The editor that makes them is a single HTML file you can keep, run offline, or install on a phone.
 
-**Version 1.0.** Open source: code under Apache-2.0, written material under CC BY 4.0 (see [NOTICE.md](NOTICE.md)).
+**Version 1.1.** Open source: code under Apache-2.0, written material under CC BY 4.0 (see [NOTICE.md](NOTICE.md)).
 
 ## Try it
 
@@ -12,8 +12,9 @@ These files are called **Helix documents** and end in `.helix.html`. The editor 
 |---|---|
 | Use it on a phone or tablet | Open **<https://greenhelixsystems.github.io/green-helix-document-app/>** and choose *Add to Home Screen* (it then works offline). Notes in [mobile/README.md](mobile/README.md). |
 | Use it on a computer | Download [`editor/green-helix-document-editor.html`](editor/green-helix-document-editor.html) and open it in Chrome, Edge, Safari or Firefox. |
-| Have an AI assistant make a document for me | Give the assistant [`guide/HELIX-guide.md`](guide/HELIX-guide.md) and your files. |
-| Check, unpack or build documents from a script | Use [`tools/helix.py`](tools/helix.py) (Python 3.8+, no packages needed). |
+| Have an AI assistant make a document for me | Give the assistant [`guide/HELIX-guide.md`](guide/HELIX-guide.md), [`tools/helix.py`](tools/helix.py) and your files. |
+| Pass a document between AI assistants without wasting their context | Put [`guide/HELIX-QUICKSTART.md`](guide/HELIX-QUICKSTART.md) (one screen) or [`guide/HELIX-WORKFLOW.md`](guide/HELIX-WORKFLOW.md) (two pages, customisable) in each assistant's instructions, and give them `helix.py`. See [the example](examples/project-handoff/). |
+| Check, unpack, build or patch documents from a script | Use [`tools/helix.py`](tools/helix.py) (Python 3.8+, no packages needed). |
 
 Nothing you type or attach leaves your device. There is no server, no account and no tracking.
 
@@ -23,7 +24,9 @@ Nothing you type or attach leaves your device. There is no server, no account an
 - **Attached files, byte for byte.** Files are embedded exactly as they were. Each can carry a SHA-256 fingerprint so the reader can confirm it has not changed.
 - **Looks right everywhere.** Light and dark mode, phone layout, a print layout that includes every tab, five accent colours, an optional logo, status label (Draft, For review, Final), contents list and footer.
 - **Starting points.** Blank, project tracker, meeting notes, client package, client delivery and AI hand-over.
-- **Readable by people and machines.** The complete content is also stored as JSON at the very start of the file, with a visible "About this file" note explaining it. **Export for AI (.zip)** produces plain `content.md` plus the original files and images.
+- **Readable by people and machines.** The complete content is also stored as JSON at the very start of the file, with a visible "About this file" note explaining it. **Export for AI (.zip)** produces plain `content.md` plus the original files and images, but an AI does not need it.
+- **AI Notes and a Revision Log** (new in 1.1). Two small buttons under the title. *AI Notes* hold instructions for AI assistants, the sections to focus on, the sections to leave alone and an optional assignment. *Revision Log* shows every version: who changed what, and when. Both are visible to readers, collapsed by default and never printed.
+- **Versions that travel with the file** (new in 1.1). Each document has a permanent id and a version number. Saving changes makes the next version, named `Report_v1.1.helix.html`. Ids of tabs, blocks and files never change, so an assistant can change one section and leave everything else byte for byte.
 - **Easy to reopen.** Open the file in the editor and everything is editable again: tabs, blocks, attachments and options.
 
 ## The format in a minute
@@ -36,20 +39,35 @@ A Helix document is an ordinary HTML file with three rules:
 
 Because it is plain HTML, any browser can open it, and `helix.py check` can confirm that a file follows the rules and that the visible page matches its data. See [docs/FORMAT.md](docs/FORMAT.md) for the plain-language description.
 
+## Working with AI assistants
+
+Version 1.1 is designed so an assistant reads only what its task needs:
+
+```
+python tools/helix.py outline Report_v1.helix.html        # id, version, AI Notes, a one-line outline (reads no attachments)
+python tools/helix.py get Report_v1.helix.html --focus    # just the sections the AI Notes point to
+python tools/helix.py patch Report_v1.helix.html patch.json   # change blocks by id -> Report_v1.1.helix.html
+python tools/helix.py diff Report_v1.helix.html Report_v1.1.helix.html
+python tools/helix.py return-check return.json --base Report_v1.helix.html --doc Report_v1.1.helix.html
+```
+
+A patch names the revision it was made from, so a stale edit is refused instead of overwriting newer work. Protected sections cannot be changed, and an assistant cannot mark its own work as reviewed or approved. Section 3A of the guide has the details.
+
 ## Repository map
 
 ```
 editor/    the desktop editor: one HTML file (generated from src/)
 mobile/    the same editor packaged as an installable web app; published to GitHub Pages
 tools/     helix.py, the build / unpack / check tool (one Python file, standard library only)
-guide/     HELIX-guide.md, instructions for AI assistants, with helix.py included
+guide/     HELIX-guide.md (full instructions, with helix.py included), HELIX-WORKFLOW.md and HELIX-QUICKSTART.md
+examples/  a worked project handoff between two AI assistants
 docs/      FORMAT.md, the format described in plain language
 src/       the source everything above is built from
 build/     build.py, which regenerates the generated folders from src/
 tests/     automated tests (python tests/run_all.py)
 ```
 
-Do not edit `editor/`, `mobile/`, `tools/helix.py` or `guide/HELIX-guide.md` by hand; change `src/` and run `python build/build.py`.
+Do not edit `editor/`, `mobile/`, `tools/helix.py` or anything in `guide/` by hand; change `src/` and run `python build/build.py`.
 
 ## Known limits
 
@@ -65,7 +83,7 @@ Found a problem? Please open an issue (see [CONTRIBUTING.md](CONTRIBUTING.md)).
 ## Building and testing
 
 ```
-python build/build.py       # regenerate editor/, mobile/, tools/helix.py, guide/HELIX-guide.md
+python build/build.py       # regenerate editor/, mobile/, tools/helix.py and guide/
 python build/build.py --check   # fail if the committed files are out of date
 python tests/run_all.py     # run every test suite
 ```

@@ -2,6 +2,7 @@ import base64, hashlib, html as htmllib, json, os, re, urllib.parse, zipfile
 from playwright.sync_api import sync_playwright
 
 from common import *
+short_ver = ".".join(open(os.path.join(str(ROOT), "VERSION")).read().strip().split(".")[:2])
 T = work("v10")
 os.makedirs(T, exist_ok=True)
 ok = []
@@ -83,7 +84,7 @@ with sync_playwright() as p:
     check("data block ends before the first embedded file", js_end < first_b64, (js_end, first_b64))
     check("only 1 script element in the whole file", html.count("<script") == 1 and html.count("</script>") == 1)
     check("everything an AI needs sits in the first 40 KB", js_end < 40000, js_end)
-    check("format helix version 1, generator 1.0", src["format"] == "helix" and src["version"] == 1 and 'Document Editor 1.0"' in html)
+    check("format helix version 1, spec 1.1, generator " + short_ver, src["format"] == "helix" and src["version"] == 1 and src["spec"] == "1.1" and ('Document Editor %s"' % short_ver) in html)
     check("data lists every attachment with a fingerprint", all(v.get("sha256") for v in src["assets"].values()) and len(src["assets"]) == 2)
     check("data block has no file bytes in it", "base64," not in html[:js_end] and "data:image" not in html[:js_end] and "data:application" not in html[:js_end])
 
@@ -91,7 +92,7 @@ with sync_playwright() as p:
     about_html = re.search(r'<details class="about">.*?</details>', html, re.S)
     check("About section exists, after the content, collapsed", about_html is not None and html.index('<details class="about">') > html.index("report (final).pdf") and "open" not in about_html.group(0)[:30])
     lis = [htmllib.unescape(x) for x in re.findall(r"<li>(.*?)</li>", about_html.group(0), re.S)]
-    check("it has the four instructions for AI and software", len(lis) == 4 and "doc-source" in lis[0] and "SHA-256" in lis[3], len(lis))
+    check("it has the five instructions for AI and software (data block, AI Notes, focus first, attachments, revising)", len(lis) == 5 and "doc-source" in lis[0] and "focus" in lis[1] and "full review" in lis[2] and "SHA-256" in lis[3] and "rev" in lis[4], len(lis))
     check("the data block carries the same words", src["about"] == "This is a Helix document (a single self-contained HTML file with no scripts). " + " ".join(lis))
     check("the section is plain visible text, no hidden elements or comments", "<!--" not in html and 'aria-hidden' not in about_html.group(0) and "display:none" not in about_html.group(0) and 'hidden' not in about_html.group(0))
     check("it says what the file is, in plain language", "single web page that opens in any browser" in about_html.group(0) and "contains no scripts" in about_html.group(0))
@@ -117,7 +118,7 @@ with sync_playwright() as p:
     det = v.locator("details.about")
     check("About is collapsed until opened", det.count() == 1 and not det.evaluate("e=>e.open") and det.locator("summary").inner_text() == "About this file")
     det.locator("summary").click()
-    check("About opens with a plain click and shows the text", det.evaluate("e=>e.open") and "doc-source" in det.inner_text() and det.locator("li").count() == 4)
+    check("About opens with a plain click and shows the text", det.evaluate("e=>e.open") and "doc-source" in det.inner_text() and det.locator("li").count() == 5)
     v.screenshot(path=T + "/doc-about-open.png", full_page=True)
     v.emulate_media(media="print")
     check("About is not printed", det.evaluate("e=>getComputedStyle(e).display") == "none")
