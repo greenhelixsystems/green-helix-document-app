@@ -2,7 +2,7 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [semantic versioning](https://semver.org/).
 
-## [1.1.0] - unreleased
+## [1.1.0] - 2026-11-21
 
 AI-native documents: identity, revisions, AI Notes and work handoffs. The format stays version 1 (every 1.0 file is a valid 1.1 file); the data block now says `"spec": "1.1"`.
 
@@ -21,7 +21,8 @@ AI-native documents: identity, revisions, AI Notes and work handoffs. The format
 - Saving changed content records one revision per editing session and names the file `Title_v1.1.helix.html`. Saving unchanged content keeps the revision. When the version changes, the editor asks where to save rather than overwriting the previous version.
 
 ### helix.py
-- New commands: `outline` and `get` (read only the data block, never attachments; `get --focus` returns just the focus with the base hash), `asset`, `patch` (set, insert, delete, move, ai, title, attach; conflict detection, protected sections, automatic version and log entry), `diff`, `check --json` and `return-check` (from a returned file alone, or from a separate return for assistants without code).
+- New commands: `outline` and `get` (read only the data block, never attachments; `get --focus` returns just the focus with the base hash), `asset`, `patch` (set, insert, delete, move, ai, title, attach; conflict detection, protected sections, automatic version and log entry), `diff`, `check --json`, `return-check` (from a returned file alone, or from a separate return for assistants without code) and `hash` (stored versus computed revision hash, canonical form and its first differences, for testing other writers).
+- `docs/hash-vectors.json`: canonical JSON strings and SHA-256 values that other implementations must reproduce. A stored hash that does not match the content always fails `check`.
 - `unpack` keeps every id and the revision record; `build` of an unchanged unpacked spec gives an identical file, and a changed one becomes the next revision.
 - Specs may give blocks friendly ids (`"budget"`) for AI Notes to point at; `build` maps them to real ids. `by` and `kind` record who created the document; `--now` makes builds reproducible.
 

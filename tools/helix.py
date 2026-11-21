@@ -1222,13 +1222,22 @@ def _canon(obj):
     return re.sub("[\ud800-\udfff]", lambda m: "\\u%04x" % ord(m.group(0)), s)
 
 
-def content_hash(doc, assets):
-    """SHA-256 of the document's content: everything except the revision record, timestamps and log."""
+def content_of(doc, assets):
+    """What rev.hash covers: everything except the revision record, timestamps and log."""
     c = {"title": doc["title"], "subtitle": doc["subtitle"], "options": doc["options"], "tabs": doc["tabs"],
          "assets": dict((k, fingerprint(a)) for k, a in assets.items())}
     if doc.get("ai"):
         c["ai"] = doc["ai"]
-    return hashlib.sha256(_canon(c).encode("utf-8")).hexdigest()
+    return c
+
+
+def hash_of(content):
+    return hashlib.sha256(_canon(content).encode("utf-8")).hexdigest()
+
+
+def content_hash(doc, assets):
+    """SHA-256 of the canonical JSON of the document's content (see content_of)."""
+    return hash_of(content_of(doc, assets))
 
 
 def bump_label(label, major=False):
@@ -1722,6 +1731,46 @@ def outline(path):
     out["tabs"] = tabs
     out["assets"] = [prune({"id": k, "name": a["name"], "type": a["type"], "bytes": a["bytes"], "sha256": a["sha"], "in": used.get(k, "")}) for k, a in assets.items()]
     out["size"] = {"file_bytes": os.path.getsize(path), "data_block_chars": n_json, "focus_chars": focus_chars}
+    return out
+
+
+def _differences(a, b, path="", out=None):
+    """JSON paths where a (as written) differs from b (canonical form)."""
+    out = [] if out is None else out
+    if len(out) >= 12:
+        return out
+    if isinstance(a, dict) and isinstance(b, dict):
+        for k in list(a.keys()) + [k for k in b if k not in a]:
+            if k not in b:
+                out.append("%s.%s: not part of the format (remove it)" % (path, k))
+            elif k not in a:
+                out.append("%s.%s: missing (canonical value %s)" % (path, k, json.dumps(b[k], ensure_ascii=False)[:60]))
+            else:
+                _differences(a[k], b[k], "%s.%s" % (path, k), out)
+    elif isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            out.append("%s: %d item(s) written, %d in canonical form" % (path, len(a), len(b)))
+        for i, (x, y) in enumerate(zip(a, b)):
+            _differences(x, y, "%s[%d]" % (path, i), out)
+    elif a != b or type(a) != type(b):
+        out.append("%s: written %s, canonical %s" % (path, json.dumps(a, ensure_ascii=False)[:60], json.dumps(b, ensure_ascii=False)[:60]))
+    return out
+
+
+def hash_report(path, show=False):
+    """For writers other than this tool: is the stored rev.hash right, and is the data block in canonical form?"""
+    data, _ = read_data_block(path)
+    doc, assets = light_load(data)
+    rev = data.get("rev") if isinstance(data.get("rev"), dict) else {}
+    stored = rev.get("hash") if isinstance(rev.get("hash"), str) else None
+    computed = content_hash(doc, assets)
+    canon_block = json.loads(_js_json(data_block(doc, assets)))
+    diffs = [] if canon_block == data else _differences(data, canon_block)
+    out = {"stored": stored, "computed": computed, "match": stored == computed, "canonical": not diffs}
+    if diffs:
+        out["differences"] = diffs
+    if show:
+        out["canonical_json"] = _canon(content_of(doc, assets))
     return out
 
 
@@ -2706,8 +2755,8 @@ def check_document(text):
         if not (isinstance(stored, str) and re.fullmatch(_HASH, stored)):
             notes.append("no revision hash saved; tools add one when they next write the file")
         elif stored != content_hash(doc, assets):
-            msg = "the content does not match its revision hash: it was changed by hand or by software that does not record revisions"
-            (notes if normalised else problems).append(msg + (" (the data block was also normalised when read)" if normalised else ""))
+            problems.append("the content does not match its revision hash: it was changed by hand, or written by software that does not compute the hash"
+                            " canonically" + (" (the data block is also not in canonical form; run helix.py hash for details)" if normalised else ""))
     if r.generator == GENERATOR:
         date = doc["options"]["footer"]["date"]
         try:
@@ -2762,6 +2811,9 @@ Working in small pieces (for AI assistants; output is JSON):
       What changed between two revisions, block by block.
   python helix.py check document.helix.html --json
       The checks above as JSON.
+  python helix.py hash document.helix.html [--show]
+      The stored and computed revision hash, and whether the data block is in canonical form (with the first
+      differences if not). --show prints the canonical JSON the hash covers. For testing other writers.
   python helix.py return-check --doc returned.helix.html [--base original.helix.html]
       Read and check the report an AI left in a returned file (its newest Revision Log entry).
   python helix.py return-check return.json [--doc returned.helix.html] [--base original.helix.html]
@@ -2818,6 +2870,10 @@ def main(argv):
             problems, notes = check_document(open(args[0], encoding="utf-8").read())
             emit({"ok": not problems, "problems": problems, "notes": notes})
             return 1 if problems else 0
+        if cmd == "hash" and len(args) == 1:
+            res = hash_report(args[0], "--show" in flags)
+            emit(res)
+            return 0 if res["match"] and res["canonical"] else 1
         if cmd == "outline" and len(args) == 1:
             emit(outline(args[0]))
             return 0

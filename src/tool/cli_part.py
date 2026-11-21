@@ -581,8 +581,8 @@ def check_document(text):
         if not (isinstance(stored, str) and re.fullmatch(_HASH, stored)):
             notes.append("no revision hash saved; tools add one when they next write the file")
         elif stored != content_hash(doc, assets):
-            msg = "the content does not match its revision hash: it was changed by hand or by software that does not record revisions"
-            (notes if normalised else problems).append(msg + (" (the data block was also normalised when read)" if normalised else ""))
+            problems.append("the content does not match its revision hash: it was changed by hand, or written by software that does not compute the hash"
+                            " canonically" + (" (the data block is also not in canonical form; run helix.py hash for details)" if normalised else ""))
     if r.generator == GENERATOR:
         date = doc["options"]["footer"]["date"]
         try:
@@ -637,6 +637,9 @@ Working in small pieces (for AI assistants; output is JSON):
       What changed between two revisions, block by block.
   python helix.py check document.helix.html --json
       The checks above as JSON.
+  python helix.py hash document.helix.html [--show]
+      The stored and computed revision hash, and whether the data block is in canonical form (with the first
+      differences if not). --show prints the canonical JSON the hash covers. For testing other writers.
   python helix.py return-check --doc returned.helix.html [--base original.helix.html]
       Read and check the report an AI left in a returned file (its newest Revision Log entry).
   python helix.py return-check return.json [--doc returned.helix.html] [--base original.helix.html]
@@ -693,6 +696,10 @@ def main(argv):
             problems, notes = check_document(open(args[0], encoding="utf-8").read())
             emit({"ok": not problems, "problems": problems, "notes": notes})
             return 1 if problems else 0
+        if cmd == "hash" and len(args) == 1:
+            res = hash_report(args[0], "--show" in flags)
+            emit(res)
+            return 0 if res["match"] and res["canonical"] else 1
         if cmd == "outline" and len(args) == 1:
             emit(outline(args[0]))
             return 0

@@ -138,6 +138,46 @@ def outline(path):
     return out
 
 
+def _differences(a, b, path="", out=None):
+    """JSON paths where a (as written) differs from b (canonical form)."""
+    out = [] if out is None else out
+    if len(out) >= 12:
+        return out
+    if isinstance(a, dict) and isinstance(b, dict):
+        for k in list(a.keys()) + [k for k in b if k not in a]:
+            if k not in b:
+                out.append("%s.%s: not part of the format (remove it)" % (path, k))
+            elif k not in a:
+                out.append("%s.%s: missing (canonical value %s)" % (path, k, json.dumps(b[k], ensure_ascii=False)[:60]))
+            else:
+                _differences(a[k], b[k], "%s.%s" % (path, k), out)
+    elif isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            out.append("%s: %d item(s) written, %d in canonical form" % (path, len(a), len(b)))
+        for i, (x, y) in enumerate(zip(a, b)):
+            _differences(x, y, "%s[%d]" % (path, i), out)
+    elif a != b or type(a) != type(b):
+        out.append("%s: written %s, canonical %s" % (path, json.dumps(a, ensure_ascii=False)[:60], json.dumps(b, ensure_ascii=False)[:60]))
+    return out
+
+
+def hash_report(path, show=False):
+    """For writers other than this tool: is the stored rev.hash right, and is the data block in canonical form?"""
+    data, _ = read_data_block(path)
+    doc, assets = light_load(data)
+    rev = data.get("rev") if isinstance(data.get("rev"), dict) else {}
+    stored = rev.get("hash") if isinstance(rev.get("hash"), str) else None
+    computed = content_hash(doc, assets)
+    canon_block = json.loads(_js_json(data_block(doc, assets)))
+    diffs = [] if canon_block == data else _differences(data, canon_block)
+    out = {"stored": stored, "computed": computed, "match": stored == computed, "canonical": not diffs}
+    if diffs:
+        out["differences"] = diffs
+    if show:
+        out["canonical_json"] = _canon(content_of(doc, assets))
+    return out
+
+
 def get_blocks(path, ids, focus=False, as_md=False):
     data, _n = read_data_block(path)
     doc, assets = light_load(data)

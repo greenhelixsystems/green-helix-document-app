@@ -499,7 +499,7 @@ An app may write files itself. To be read correctly it must:
 1. Put the data block first in `<head>`, escape every `<` in it as `\u003c`, and use exactly the security policy line above. No other scripts.
 2. Use ids of the letter `a` plus 6 to 24 lowercase letters or digits for tabs, blocks and assets, and a unique document `id` (`hx-` plus 16 hex digits is fine).
 3. Write blocks in the shape shown above, embed each attachment once as a `data:` link on `id="asset-ID"`, and record its SHA-256.
-4. Write `rev.hash` only if it can produce exactly the canonical form above; otherwise leave it out and the tools will add it.
+4. Compute `rev.hash` canonically (see *The data block* above). It is what lets a receiver detect conflicts and check returned files, so a writer that skips it weakens both. Write every block in its canonical shape (all of its fields, as the editor writes them), then confirm with `python helix.py hash file.helix.html`: it must say `"match": true` and `"canonical": true`, and it lists the first differences when not. `docs/hash-vectors.json` has canonical strings and hashes to reproduce in tests. A file whose stored hash does not match fails `check`.
 5. Use its own `generator` name (for example `Example Planner 2.3`), so `check` does not expect the reference layout byte for byte.
 6. Show AI Notes and the Revision Log visibly when present (collapsed `<details>` elements under the title are enough), and never hide them from readers.
 

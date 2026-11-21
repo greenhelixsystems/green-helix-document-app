@@ -1848,7 +1848,7 @@ if(document.querySelector('link[rel=manifest]')&&'serviceWorker' in navigator&&(
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
 }
 blank();syncChrome();render();
-window.__pde={md:mdRender,san:sanitize,toMd:function(){return docToMd(gatherFiles().paths);},sha:sha256,bytes:bytesOf,bad:function(){return lastBad;},build:buildDocument,load:function(t){var m=loadText(t);resetHistory();syncChrome();render();return m;},state:function(){return {doc:Object.assign({},doc,{blocks:B()}),assets:assets.size,cur:cur};}};
+window.__pde={canon:canon,md:mdRender,san:sanitize,toMd:function(){return docToMd(gatherFiles().paths);},sha:sha256,bytes:bytesOf,bad:function(){return lastBad;},build:buildDocument,load:function(t){var m=loadText(t);resetHistory();syncChrome();render();return m;},state:function(){return {doc:Object.assign({},doc,{blocks:B()}),assets:assets.size,cur:cur};}};
 })();
 </script>
 </body>

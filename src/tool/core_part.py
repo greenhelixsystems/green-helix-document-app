@@ -259,13 +259,22 @@ def _canon(obj):
     return re.sub("[\ud800-\udfff]", lambda m: "\\u%04x" % ord(m.group(0)), s)
 
 
-def content_hash(doc, assets):
-    """SHA-256 of the document's content: everything except the revision record, timestamps and log."""
+def content_of(doc, assets):
+    """What rev.hash covers: everything except the revision record, timestamps and log."""
     c = {"title": doc["title"], "subtitle": doc["subtitle"], "options": doc["options"], "tabs": doc["tabs"],
          "assets": dict((k, fingerprint(a)) for k, a in assets.items())}
     if doc.get("ai"):
         c["ai"] = doc["ai"]
-    return hashlib.sha256(_canon(c).encode("utf-8")).hexdigest()
+    return c
+
+
+def hash_of(content):
+    return hashlib.sha256(_canon(content).encode("utf-8")).hexdigest()
+
+
+def content_hash(doc, assets):
+    """SHA-256 of the canonical JSON of the document's content (see content_of)."""
+    return hash_of(content_of(doc, assets))
 
 
 def bump_label(label, major=False):

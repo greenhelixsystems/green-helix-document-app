@@ -152,6 +152,14 @@ check("...and rejects a returned file whose content was changed by hand", rc == 
 d_ret = data_of(read(T + "/fromreturn.helix.html"))["log"][-1]
 check("a no-code return applied with patch also lands its report in the file", d_ret.get("questions") == ["Lumber price?"] and d_ret.get("next") == "Owner review" and d_ret.get("review") is True, d_ret)
 
+rc, hr = jcli("hash", "Shed_v1.1.helix.html")
+check("hash: a tool-written file matches and is canonical", rc == 0 and hr["match"] and hr["canonical"], hr)
+open(T + "/third.helix.html", "w", encoding="utf-8").write(v11.replace('"type":"checklist","title":"Checklist","half":false', '"type":"checklist","title":"Checklist"', 1))
+rc, hr = jcli("hash", "third.helix.html")
+check("hash: a writer that drops a field is told which one", rc == 1 and not hr["canonical"] and any(".half: missing" in d for d in hr.get("differences", [])), hr)
+rc, hr = jcli("hash", "Shed_v1.1.helix.html", "--show")
+check("hash --show prints the canonical JSON the hash covers", rc == 0 and hx.hash_of(json.loads(hr["canonical_json"])) == hr["computed"])
+
 # ---------------------------------------------------------------- integrity and versions
 hand = v11.replace('"Total","2,100"', '"Total","9,999"')
 check("a hand edit to the data is caught by the revision hash", any("revision hash" in p for p in hx.check_document(hand)[0]), hx.check_document(hand))
