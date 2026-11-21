@@ -51,7 +51,7 @@ JSON with these top-level keys:
 | `options` | `toc`, `accent`, `footer`, `logo`, `status`, `fingerprints`, `about` |
 | `tabs` | Ordered tabs, each with an `id`, a `title` and ordered `blocks` |
 | `assets` | One entry per image or file: `name`, `type`, `bytes`, `sha256` |
-| `log` | Revision Log entries: `rev`, `label`, `at`, `by`, `kind`, `summary`, `blocks`, `status`, `checks`, `note` |
+| `log` | Revision Log entries: `rev`, `label`, `at`, `by`, `kind`, `summary`, `blocks`, `status`, `checks`, `note`, and the handback `task`, `questions`, `next`, `review` |
 
 Keys appear in this order and empty values are left out, so the identity and the AI Notes come first.
 
@@ -75,7 +75,7 @@ AI Notes are instructions for AI assistants from the people working on the docum
 - `protect` lists sections that must not change.
 - `work` is an optional assignment from the app that prepared the document.
 
-The **Revision Log** button shows each revision: who made it, what it changed and what it claims (`submitted`, `validated`, and so on). A log entry is a claim, not proof. Only a person or the system that assigned the work records review or approval.
+The **Revision Log** button shows each revision: who made it, what it changed and what it claims (`submitted`, `validated`, and so on). The newest entry is also the reviser's report: the task, open questions, the proposed next step and whether a person should review. A revised file therefore carries its own handback, and one file can pass between assistants and people with nothing beside it. A log entry is a claim, not proof. Only a person or the system that assigned the work records review or approval.
 
 ## Revisions
 

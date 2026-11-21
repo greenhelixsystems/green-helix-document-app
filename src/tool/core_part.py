@@ -152,12 +152,20 @@ def _log_li(doc, assets, e):
     li = "<li>" + " \u00b7 ".join(bits) + (": " + esc(trim(e["summary"])) if trim(e.get("summary", "")) else "")
     if e.get("status"):
         li += ' <span class="hxs">' + WORK[e["status"]] + "</span>"
+    if e.get("review"):
+        li += ' <span class="hxs">Needs review</span>'
+    if trim(e.get("task", "")):
+        li += '<br><span class="hxm">Task: ' + esc(trim(e["task"])) + "</span>"
     if e.get("blocks"):
         li += '<br><span class="hxm">Changed: ' + _names(doc, assets, e["blocks"]) + "</span>"
     if trim(e.get("checks", "")):
         li += '<br><span class="hxm">Checks: ' + esc(trim(e["checks"])) + "</span>"
     if trim(e.get("note", "")):
         li += '<br><span class="hxm">' + esc(trim(e["note"])) + "</span>"
+    for q in e.get("questions", []):
+        li += '<br><span class="hxm">Question: ' + esc(trim(q)) + "</span>"
+    if trim(e.get("next", "")):
+        li += '<br><span class="hxm">Next: ' + esc(trim(e["next"])) + "</span>"
     return li + "</li>"
 
 
@@ -440,7 +448,8 @@ def norm_entry(e):
         return None
     return prune({"rev": _int(e.get("rev")), "label": _match(_LABEL, e.get("label")), "at": _match(_TIME, e.get("at")), "by": _s(e.get("by")),
                   "kind": e.get("kind") if _has(KINDS, e.get("kind")) else "", "summary": _lf(_s(e.get("summary"))), "blocks": _ids(e.get("blocks")),
-                  "status": e.get("status") if _has(WORK, e.get("status")) else "", "checks": _lf(_s(e.get("checks"))), "note": _lf(_s(e.get("note")))})
+                  "status": e.get("status") if _has(WORK, e.get("status")) else "", "checks": _lf(_s(e.get("checks"))), "note": _lf(_s(e.get("note"))),
+                  "task": _s(e.get("task")), "questions": _strs(e.get("questions")), "next": _lf(_s(e.get("next"))), "review": True if e.get("review") is True else None})
 
 
 def norm_meta(data):

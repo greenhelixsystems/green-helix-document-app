@@ -22,8 +22,9 @@ shutil.rmtree(os.path.join(T, "examples", "project-handoff"), ignore_errors=True
 shutil.move(copy, os.path.join(T, "examples", "project-handoff"))
 gen = os.path.join(T, "examples", "project-handoff")
 r = subprocess.run([sys.executable, os.path.join(gen, "make.py")], capture_output=True, text=True)
-check("make.py runs and its return passes return-check", r.returncode == 0 and '"ok": true' in r.stdout, r.stdout + r.stderr)
-for f in (V1, V11, "patch.json", "return.json"):
+check("make.py runs and the returned file passes return-check on its own", r.returncode == 0 and '"ok": true' in r.stdout and '"needs_review": true' in r.stdout, r.stdout + r.stderr)
+check("the example needs no file beside the document (no return.json)", not os.path.exists(os.path.join(EX, "return.json")))
+for f in (V1, V11, "patch.json"):
     check("the committed %s matches make.py's output" % f, read(os.path.join(gen, f)) == read(os.path.join(EX, f)))
 for f in (V1, V11):
     check("%s passes check" % f, hx.check_document(read(os.path.join(EX, f)))[0] == [])

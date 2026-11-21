@@ -48,10 +48,10 @@ python tools/helix.py outline Report_v1.helix.html        # id, version, AI Note
 python tools/helix.py get Report_v1.helix.html --focus    # just the sections the AI Notes point to
 python tools/helix.py patch Report_v1.helix.html patch.json   # change blocks by id -> Report_v1.1.helix.html
 python tools/helix.py diff Report_v1.helix.html Report_v1.1.helix.html
-python tools/helix.py return-check return.json --base Report_v1.helix.html --doc Report_v1.1.helix.html
+python tools/helix.py return-check --doc Report_v1.1.helix.html --base Report_v1.helix.html   # reads the report inside the file
 ```
 
-A patch names the revision it was made from, so a stale edit is refused instead of overwriting newer work. Protected sections cannot be changed, and an assistant cannot mark its own work as reviewed or approved. Section 3A of the guide has the details.
+One file goes back and forth: the reviser's report (summary, questions, next step, needs review) is saved in the file's Revision Log. A patch names the revision it was made from, so a stale edit is refused instead of overwriting newer work. Protected sections cannot be changed, and an assistant cannot mark its own work as reviewed or approved. Section 3A of the guide has the details.
 
 ## Repository map
 

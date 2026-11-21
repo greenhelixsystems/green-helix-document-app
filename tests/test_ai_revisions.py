@@ -79,13 +79,17 @@ def patch_file(name, ops, base=None, log=None, **extra):
     p = dict({"helixPatch": 1, "doc": d1["id"], "base": base or d1["rev"]["hash"], "ops": ops, "log": log or {"by": "Claude", "summary": "Edited"}}, **extra)
     json.dump(p, open(T + "/" + name, "w", encoding="utf-8")); return name
 pf = patch_file("p1.json", [{"op": "set", "id": blk["Budget"], "rows": [["Item", "Cost"], ["Gravel", "300"], ["Lumber", "1,800"], ["Total", "2,100"]]},
-                            {"op": "ai", "notes_append": "Claude: added a total."}], log={"by": "Claude", "kind": "ai", "summary": "Added a total"})
+                            {"op": "ai", "notes_append": "Claude: added a total."}], log={"by": "Claude", "kind": "ai", "summary": "Added a total",
+                            "questions": ["Lumber price?"], "next": "Owner review", "review": True})
 rc, res = jcli("patch", "Shed_v1.helix.html", pf, "--now", "2026-11-21T11:00:00Z")
 check("patch writes Shed_v1.1.helix.html", rc == 0 and res["file"].endswith("Shed_v1.1.helix.html") and os.path.exists(T + "/Shed_v1.1.helix.html"), res)
 v11 = read(T + "/Shed_v1.1.helix.html"); d11 = data_of(v11)
 check("revision 2, label 1.1, parent is the old hash", d11["rev"]["n"] == 2 and d11["rev"]["label"] == "1.1" and d11["rev"]["parent"] == d1["rev"]["hash"] and d11["id"] == d1["id"])
 check("log records who, what, which block and the tool's own check", d11["log"][-1]["by"] == "Claude" and d11["log"][-1]["blocks"] == [blk["Budget"]] and d11["log"][-1]["status"] == "submitted" and "helix.py check: pass" in d11["log"][-1]["checks"], d11["log"][-1])
 check("AI Notes gained the appended note", d11["ai"]["notes"].endswith("Claude: added a total."))
+check("the report is in the file: task from the assignment, questions, next step, needs review",
+      {k: d11["log"][-1].get(k) for k in ("task", "questions", "next", "review")} == {"task": "SHED-2", "questions": ["Lumber price?"], "next": "Owner review", "review": True}, d11["log"][-1])
+check("readers see the report under Revision Log", "Question: Lumber price?" in v11 and "Next: Owner review" in v11 and "Needs review</span>" in v11 and "Task: SHED-2" in v11)
 untouched = lambda d: [b for t in d["tabs"] for b in t["blocks"] if b["id"] != blk["Budget"]]
 check("every other block is unchanged", untouched(d1) == untouched(d11))
 aa = lambda h: sorted(re.findall(r'(?:href|src)="(data:[^"]+)"', h))
@@ -135,6 +139,18 @@ check("a return whose patch touches a protected block fails", rc == 1 and any("d
 json.dump(dict(env, result="", patch={"ops": [{"op": "set", "id": blk["Budget"], "title": "Costs"}]}), open(T + "/ret5.json", "w"))
 rc, res = jcli("patch", "Shed_v1.helix.html", "ret5.json", "-o", "fromreturn.helix.html")
 check("patch accepts a return that carries a patch", rc == 0 and data_of(read(T + "/fromreturn.helix.html"))["log"][-1]["summary"] == "Added a total", res)
+
+rc, hb = jcli("return-check", "--doc", "Shed_v1.1.helix.html", "--base", "Shed_v1.helix.html")
+check("return-check reads the report from the returned file alone", rc == 0 and hb["ok"] and hb["report"]["questions"] == ["Lumber price?"] and hb["report"]["needs_review"] is True
+      and hb["report"]["from"] == "1" and hb["report"]["to"] == "1.1" and hb["task"] == "SHED-2", hb)
+rc, hb = jcli("return-check", "--doc", "Shed_v1.1.helix.html")
+check("...also without the original", rc == 0 and hb["ok"], hb)
+rc, hb = jcli("return-check", "--doc", "Shed_v1.1.helix.html", "--base", "Shed_v1.1.helix.html")
+check("...and it notices a file that does not follow the base", rc == 1 and any("different revision" in p for p in hb["problems"]), hb)
+rc, hb = jcli("return-check", "--doc", "hand.helix.html") if open(T + "/hand.helix.html", "w", encoding="utf-8").write(v11.replace('"Total","2,100"', '"Total","9,999"')) else (None, None)
+check("...and rejects a returned file whose content was changed by hand", rc == 1 and any("revision hash" in p for p in hb["problems"]), hb)
+d_ret = data_of(read(T + "/fromreturn.helix.html"))["log"][-1]
+check("a no-code return applied with patch also lands its report in the file", d_ret.get("questions") == ["Lumber price?"] and d_ret.get("next") == "Owner review" and d_ret.get("review") is True, d_ret)
 
 # ---------------------------------------------------------------- integrity and versions
 hand = v11.replace('"Total","2,100"', '"Total","9,999"')

@@ -331,8 +331,10 @@ def patch_document(path, patch, base_dir=".", out=None, allow_protected=False, f
         patch.setdefault("base", env.get("base"))
         patch.setdefault("doc", env.get("doc"))
         lg = dict(patch.get("log") or {})
-        lg.setdefault("summary", env.get("summary"))
-        lg.setdefault("status", env.get("status"))
+        for k in ("summary", "status", "task", "questions", "next"):
+            lg.setdefault(k, env.get(k))
+        if isinstance(env.get("humanReview"), bool):
+            lg.setdefault("review", env["humanReview"])
         patch["log"] = lg
     m = doc["meta"]
     base = content_hash(doc, assets)
@@ -380,7 +382,9 @@ def patch_document(path, patch, base_dir=".", out=None, allow_protected=False, f
     entry = norm_entry({"rev": nm["rev"]["n"], "label": label, "at": stamp, "by": trim(_s(lg.get("by"))) or "unknown",
                         "kind": lg.get("kind") if _has(KINDS, lg.get("kind")) else "ai", "summary": trim(_s(lg.get("summary"))) or "Revised",
                         "blocks": changed, "status": status, "checks": checks,
-                        "note": _s(lg.get("note")) + ((" " if trim(_s(lg.get("note"))) else "") + "Deleted %d block(s)." % len(deleted) if deleted else "")})
+                        "note": _s(lg.get("note")) + ((" " if trim(_s(lg.get("note"))) else "") + "Deleted %d block(s)." % len(deleted) if deleted else ""),
+                        "task": _s(lg.get("task")) or (new_ai.get("work") or {}).get("task", ""), "questions": lg.get("questions"), "next": lg.get("next"),
+                        "review": lg.get("review")})
     nm["log"].append(entry)
     html = render(nd, na)
     problems, _notes = check_document(html)
@@ -434,14 +438,40 @@ def diff_documents(path_a, path_b, brief=False):
 
 
 # ---------------------------------------------------------------- AI returns
-def check_return(env, doc_path=None, base_path=None, base_dir="."):
+def handback(doc_path, base_path=None):
+    """Read the report an AI left in a returned file (its newest Revision Log entry) and check it.
+    One file carries everything: the content, the revision, and the report."""
+    d, _ = read_data_block(doc_path)
+    doc, assets = light_load(d)
+    m = doc["meta"]
+    if not m["log"]:
+        return {"ok": False, "problems": ["the file has no Revision Log entry to report from"], "notes": []}
+    e = m["log"][-1]
+    env = {"helixReturn": 1, "task": e.get("task") or ((doc.get("ai") or {}).get("work") or {}).get("task", ""), "doc": m["id"],
+           "base": m["rev"]["parent"], "result": m["rev"]["hash"], "summary": e.get("summary", ""), "blocks": e.get("blocks", []),
+           "status": e.get("status") or "submitted", "humanReview": bool(e.get("review")), "questions": e.get("questions", []), "next": e.get("next", "")}
+    out = check_return(env, doc_path, base_path, from_file=True)
+    out["report"] = prune({"by": e.get("by", ""), "kind": e.get("kind", ""), "at": e.get("at", ""), "from": e.get("label") and _prev_label(m), "to": m["rev"]["label"],
+                           "summary": env["summary"], "questions": env["questions"], "next": env["next"], "needs_review": env["humanReview"],
+                           "checks": e.get("checks", ""), "file": os.path.basename(doc_path)})
+    return out
+
+
+def _prev_label(m):
+    for e in reversed(m["log"][:-1]):
+        if e.get("label") and e.get("label") != m["rev"]["label"]:
+            return e["label"]
+    return ""
+
+
+def check_return(env, doc_path=None, base_path=None, base_dir=".", from_file=False):
     """Validate an AI's return envelope. A return is a claim: this checks it is consistent, never that work was approved."""
     problems, notes = [], []
     if not isinstance(env, dict) or env.get("helixReturn") != 1:
         return {"ok": False, "problems": ["not a Helix return (it needs \"helixReturn\": 1)"], "notes": []}
     for k in ("task", "doc", "base", "summary"):
         if not trim(_s(env.get(k))):
-            problems.append("missing " + k)
+            (notes if from_file and k in ("task", "summary") else problems).append(("no " if from_file else "missing ") + k + (" in the newest log entry" if from_file else ""))
     if env.get("base") and not re.fullmatch(_HASH, _s(env.get("base"))):
         problems.append("base is not a revision hash")
     st = env.get("status") or "submitted"

@@ -62,24 +62,22 @@ Other ops: `insert`, `delete`, `move`, `title`, `attach`. A **CONFLICT** means t
 
 **Customise:** *your quality bar, for example tone, length, citation rules, house style.*
 
-## 4. Hand it back
+## 4. Hand it back: one file
 
-Return:
-
-1. the new file (`Name_v1.3.helix.html`), or, without code, your patch inside the return below;
-2. a return envelope:
+Your report goes in the patch's `log`, and `patch` writes it into the file's Revision Log:
 
 ```json
-{"helixReturn": 1, "task": "TASK ID", "doc": "DOCUMENT ID", "base": "HASH YOU WORKED FROM", "result": "NEW HASH",
- "summary": "...", "blocks": ["BLOCK ID"], "checks": [{"name": "helix check", "result": "pass"}],
- "questions": ["..."], "next": "...", "humanReview": true, "status": "submitted"}
+"log": {"by": "YOUR NAME", "kind": "ai", "summary": "What you did", "status": "submitted",
+        "task": "TASK ID", "questions": ["..."], "next": "The step you propose", "review": true}
 ```
 
-3. two or three lines for the person: what changed, what is still open.
+Hand back **only the new file** (`Name_v1.3.helix.html`), plus two lines for the person: what changed, what is still open. The receiver checks it with `python helix.py return-check --doc Name_v1.3.helix.html --base Name_v1.2.helix.html`, which also prints your report.
+
+Without code, you cannot write the file: reply with the same report as JSON (`"helixReturn": 1`, `task`, `doc`, `base`, `summary`, `questions`, `next`, `humanReview`, and your ops under `"patch"`). The person turns it into the file with `helix.py patch`.
 
 Never claim `reviewed` or `approved`. Those are recorded by a person or by the system that assigned the work.
 
-**Customise:** *who reviews, where returns go, what needs a person's sign-off.*
+**Customise:** *who reviews, where files go next, what needs a person's sign-off.*
 
 ## 5. Making a new document
 

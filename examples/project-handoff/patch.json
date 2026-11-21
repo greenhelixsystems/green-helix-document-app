@@ -49,7 +49,12 @@
  "log": {
   "by": "Reviewer AI",
   "kind": "ai",
-  "summary": "Added contingency and total to the budget",
-  "status": "submitted"
+  "summary": "Added a 10% contingency and a total to the budget.",
+  "status": "submitted",
+  "questions": [
+   "Does the water line estimate include the 40 ft run in the site notes?"
+  ],
+  "next": "The project lead confirms the water line estimate.",
+  "review": true
  }
 }

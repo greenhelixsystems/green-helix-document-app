@@ -513,8 +513,9 @@ def build_doc_from_spec(spec, base_dir=".", shrink=True, today=None, now=None):
         m["created"] = m["created"] or stamp
         m["modified"] = m["modified"] or m["created"]
         if not m["log"]:
-            m["log"] = [prune({"rev": m["rev"]["n"], "label": m["rev"]["label"], "at": m["created"], "by": by, "kind": kind,
-                               "summary": _s(spec.get("summary")) or ("Created" if m["rev"]["n"] == 1 else "")})]
+            m["log"] = [norm_entry({"rev": m["rev"]["n"], "label": m["rev"]["label"], "at": m["created"], "by": by, "kind": kind,
+                                    "summary": _s(spec.get("summary")) or ("Created" if m["rev"]["n"] == 1 else ""), "status": spec.get("status"),
+                                    "task": spec.get("task"), "questions": spec.get("questions"), "next": spec.get("next"), "review": spec.get("review")})]
     elif fresh != had:
         n = m["rev"]["n"] + 1
         label = bump_label(m["rev"]["label"], bool(spec.get("major")))
@@ -636,8 +637,10 @@ Working in small pieces (for AI assistants; output is JSON):
       What changed between two revisions, block by block.
   python helix.py check document.helix.html --json
       The checks above as JSON.
+  python helix.py return-check --doc returned.helix.html [--base original.helix.html]
+      Read and check the report an AI left in a returned file (its newest Revision Log entry).
   python helix.py return-check return.json [--doc returned.helix.html] [--base original.helix.html]
-      Validate an AI's return against the original and the returned file.
+      The same for a separate return (for assistants that could only send a patch).
 
 Standard library only. Photos in Images blocks are scaled to 1600 px if Pillow is installed (--no-shrink to keep them).
 """
@@ -713,6 +716,10 @@ def main(argv):
         if cmd == "diff" and len(args) == 2:
             emit(diff_documents(args[0], args[1], "--brief" in flags))
             return 0
+        if cmd == "return-check" and len(args) == 0 and opts.get("--doc"):
+            res = handback(opts["--doc"], opts.get("--base"))
+            emit(res)
+            return 0 if res["ok"] else 1
         if cmd == "return-check" and len(args) == 1:
             env = json.load(open(args[0], encoding="utf-8"))
             res = check_return(env, opts.get("--doc"), opts.get("--base"), os.path.dirname(os.path.abspath(args[0])))

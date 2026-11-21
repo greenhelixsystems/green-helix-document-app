@@ -138,34 +138,47 @@ A log `status` may be `started`, `submitted`, `validated`, `blocked` or `changes
 
 **Before you hand back**, add to the AI Notes what the next reader needs (what you changed, open questions), and move `focus` to the next piece of work if the notes ask you to.
 
-## 3B. Handing work back: the return envelope
+## 3B. Handing work back: one file
 
-When an app or a person assigned you the work, return three things:
-
-1. The revised file (`Name_v1.1.helix.html`), or, if you could not run code, a patch.
-2. A small JSON **return envelope**:
+Hand back **one file**: the revised `Name_v1.1.helix.html`. Your report travels inside it, in your Revision Log entry, which `patch` writes from the patch's `log`:
 
 ```json
-{"helixReturn": 1,
- "task": "SHED-2",
- "doc": "hx-5f0c2a9e7b1d3c4e",
- "base": "HASH OF THE REVISION YOU WORKED FROM",
- "result": "HASH OF THE NEW REVISION (from patch output)",
- "file": "Garden_Shed_v1.1.helix.html",
- "summary": "Added roofing and a total to the budget.",
- "blocks": ["a322e27472ce0"],
- "outputs": [],
- "checks": [{"name": "helix check", "result": "pass"}],
- "questions": ["Is the lumber quote still valid?"],
- "next": "Owner confirms the lumber price.",
- "humanReview": true,
- "status": "submitted"}
+"log": {"by": "Claude", "kind": "ai", "summary": "Added roofing and a total to the budget.",
+        "status": "submitted", "task": "SHED-2",
+        "questions": ["Is the lumber quote still valid?"],
+        "next": "Owner confirms the lumber price.",
+        "review": true}
 ```
 
-   With no code tool, leave out `result` and `file` and put your ops in `"patch": {"ops": [...], "log": {...}}`. The receiver applies it with `helix.py patch document.helix.html return.json`, which runs the same conflict and protection checks.
-3. A two or three line summary for the person.
+| Field | Meaning |
+|---|---|
+| `summary` | What you did, in a sentence. |
+| `status` | `submitted` normally; `blocked` or `changes` if you could not finish. |
+| `task` | The assignment's id (taken from `ai.work.task` if you leave it out). |
+| `questions` | Open questions for the person or the next assistant. |
+| `next` | The next step you propose. |
+| `review` | `true` when a person should look before the work goes further. |
 
-The receiver checks a return with `python helix.py return-check return.json --base original.helix.html --doc returned.helix.html`. A return is a **claim** that work was done. It is never evidence that anyone reviewed or approved it, and a return that claims `reviewed` or `approved` fails.
+`patch` adds the rest itself: the blocks that changed, its own check result, the time and the new version. Everyone who opens the file sees the report under **Revision Log**. The next assistant sees it in `outline`. If the notes ask, also add your questions to the AI Notes with `notes_append`.
+
+The receiver checks a returned file on its own:
+
+```
+python helix.py return-check --doc Name_v1.1.helix.html --base Name_v1.helix.html
+```
+
+It confirms the file is the same document, follows the revision it was given, passed its checks and left protected sections alone. It also prints the report (who, summary, questions, next step, needs review) as JSON. `--base` is optional.
+
+A report is a **claim** that work was done. It is never evidence that anyone reviewed or approved it. A patch cannot record `reviewed` or `approved`.
+
+**Without a code tool** you cannot write the file. Send a short JSON return instead and let the person apply it with `helix.py patch document.helix.html return.json`, which runs the same checks and produces the one file:
+
+```json
+{"helixReturn": 1, "task": "SHED-2", "doc": "hx-5f0c2a9e7b1d3c4e", "base": "HASH OF THE REVISION YOU READ",
+ "summary": "...", "questions": ["..."], "next": "...", "humanReview": true, "status": "submitted",
+ "patch": {"ops": [{"op": "set", "id": "a322e27472ce0", "rows": [["Item", "Cost"], ["Total", "2,100"]]}],
+           "log": {"by": "YOUR NAME", "kind": "ai"}}}
+```
 
 **An assignment** (`ai.work`) can carry: `task`, `stage`, `role`, `assignee`, `status` (`assigned`, `started`, ...), `objective`, `instructions`, `targets` (block ids to work on), `sources` (block or attachment ids to read), `deliverables`, `done` (definition of done), `review`, and `base` (the revision it was written against). Every field is optional and all of them are shown to readers in the AI Notes.
 
@@ -372,7 +385,7 @@ If the file is over 25 MB, do not silently drop content. Tell the user and ask w
 
 Embedding files needs base64 and SHA-256, which cannot be done reliably by hand. Without a code tool, tell the user plainly that you cannot make the document, and offer a Markdown version of the content instead. They can paste it into a Markdown block in the editor and add the files there.
 
-To **revise** a document without code: read the JSON at the top of the file (stop at `</script>`), work on the focus blocks, and reply with a return envelope that carries a `patch` (section 3B). The person applies it with `helix.py patch`.
+To **revise** a document without code: read the JSON at the top of the file (stop at `</script>`), work on the focus blocks, and reply with a short JSON return that carries a `patch` (section 3B). The person applies it with `helix.py patch`, which produces the one file.
 
 ## 10. Opening, editing and sharing
 
@@ -406,6 +419,7 @@ python helix.py asset document.helix.html ID output-file
 python helix.py patch document.helix.html patch.json [-o out.helix.html] [--allow-protected] [--force] [--as-human]
 python helix.py diff old.helix.html new.helix.html [--brief]
 python helix.py check document.helix.html --json
+python helix.py return-check --doc returned.helix.html [--base original.helix.html]
 python helix.py return-check return.json [--doc returned.helix.html] [--base original.helix.html]
 ```
 
@@ -471,7 +485,7 @@ Keys appear in that order, so a reader meets the identity and the AI Notes first
 - `spec` is the feature level (`"1.1"`). `version` stays `1` because every version 1 file is still valid; it rises only for changes old readers cannot understand. Software that finds a higher `version` must not save over the file.
 - `id` identifies the document across revisions. `rev.n` counts revisions, `rev.label` is the version people see (`1`, `1.1`, `2`), `rev.parent` is the previous revision's hash.
 - `rev.hash` is the SHA-256 of the canonical JSON (keys sorted, no spaces, UTF-8) of `{"title", "subtitle", "options", "tabs", "assets": {id: sha256}, "ai"}`, with `ai` only when present. It changes when the content changes and not when only the log or timestamps do.
-- `log` entries: `rev`, `label`, `at`, `by`, `kind` (`human`, `ai`, `tool`), `summary`, `blocks` (ids changed), `status`, `checks`, `note`.
+- `log` entries: `rev`, `label`, `at`, `by`, `kind` (`human`, `ai`, `tool`), `summary`, `blocks` (ids changed), `status`, `checks`, `note`, and the handback: `task`, `questions`, `next`, `review` (`true` when a person should look).
 
 - Ids are the letter `a` followed by 6 to 24 lowercase letters or digits, unique within the file.
 - Every `<` inside the block is written as `\u003c`, so the data can never close the script tag. Any JSON parser reads it back normally.
@@ -1641,12 +1655,20 @@ def _log_li(doc, assets, e):
     li = "<li>" + " \u00b7 ".join(bits) + (": " + esc(trim(e["summary"])) if trim(e.get("summary", "")) else "")
     if e.get("status"):
         li += ' <span class="hxs">' + WORK[e["status"]] + "</span>"
+    if e.get("review"):
+        li += ' <span class="hxs">Needs review</span>'
+    if trim(e.get("task", "")):
+        li += '<br><span class="hxm">Task: ' + esc(trim(e["task"])) + "</span>"
     if e.get("blocks"):
         li += '<br><span class="hxm">Changed: ' + _names(doc, assets, e["blocks"]) + "</span>"
     if trim(e.get("checks", "")):
         li += '<br><span class="hxm">Checks: ' + esc(trim(e["checks"])) + "</span>"
     if trim(e.get("note", "")):
         li += '<br><span class="hxm">' + esc(trim(e["note"])) + "</span>"
+    for q in e.get("questions", []):
+        li += '<br><span class="hxm">Question: ' + esc(trim(q)) + "</span>"
+    if trim(e.get("next", "")):
+        li += '<br><span class="hxm">Next: ' + esc(trim(e["next"])) + "</span>"
     return li + "</li>"
 
 
@@ -1929,7 +1951,8 @@ def norm_entry(e):
         return None
     return prune({"rev": _int(e.get("rev")), "label": _match(_LABEL, e.get("label")), "at": _match(_TIME, e.get("at")), "by": _s(e.get("by")),
                   "kind": e.get("kind") if _has(KINDS, e.get("kind")) else "", "summary": _lf(_s(e.get("summary"))), "blocks": _ids(e.get("blocks")),
-                  "status": e.get("status") if _has(WORK, e.get("status")) else "", "checks": _lf(_s(e.get("checks"))), "note": _lf(_s(e.get("note")))})
+                  "status": e.get("status") if _has(WORK, e.get("status")) else "", "checks": _lf(_s(e.get("checks"))), "note": _lf(_s(e.get("note"))),
+                  "task": _s(e.get("task")), "questions": _strs(e.get("questions")), "next": _lf(_s(e.get("next"))), "review": True if e.get("review") is True else None})
 
 
 def norm_meta(data):
@@ -2435,8 +2458,10 @@ def patch_document(path, patch, base_dir=".", out=None, allow_protected=False, f
         patch.setdefault("base", env.get("base"))
         patch.setdefault("doc", env.get("doc"))
         lg = dict(patch.get("log") or {})
-        lg.setdefault("summary", env.get("summary"))
-        lg.setdefault("status", env.get("status"))
+        for k in ("summary", "status", "task", "questions", "next"):
+            lg.setdefault(k, env.get(k))
+        if isinstance(env.get("humanReview"), bool):
+            lg.setdefault("review", env["humanReview"])
         patch["log"] = lg
     m = doc["meta"]
     base = content_hash(doc, assets)
@@ -2484,7 +2509,9 @@ def patch_document(path, patch, base_dir=".", out=None, allow_protected=False, f
     entry = norm_entry({"rev": nm["rev"]["n"], "label": label, "at": stamp, "by": trim(_s(lg.get("by"))) or "unknown",
                         "kind": lg.get("kind") if _has(KINDS, lg.get("kind")) else "ai", "summary": trim(_s(lg.get("summary"))) or "Revised",
                         "blocks": changed, "status": status, "checks": checks,
-                        "note": _s(lg.get("note")) + ((" " if trim(_s(lg.get("note"))) else "") + "Deleted %d block(s)." % len(deleted) if deleted else "")})
+                        "note": _s(lg.get("note")) + ((" " if trim(_s(lg.get("note"))) else "") + "Deleted %d block(s)." % len(deleted) if deleted else ""),
+                        "task": _s(lg.get("task")) or (new_ai.get("work") or {}).get("task", ""), "questions": lg.get("questions"), "next": lg.get("next"),
+                        "review": lg.get("review")})
     nm["log"].append(entry)
     html = render(nd, na)
     problems, _notes = check_document(html)
@@ -2538,14 +2565,40 @@ def diff_documents(path_a, path_b, brief=False):
 
 
 # ---------------------------------------------------------------- AI returns
-def check_return(env, doc_path=None, base_path=None, base_dir="."):
+def handback(doc_path, base_path=None):
+    """Read the report an AI left in a returned file (its newest Revision Log entry) and check it.
+    One file carries everything: the content, the revision, and the report."""
+    d, _ = read_data_block(doc_path)
+    doc, assets = light_load(d)
+    m = doc["meta"]
+    if not m["log"]:
+        return {"ok": False, "problems": ["the file has no Revision Log entry to report from"], "notes": []}
+    e = m["log"][-1]
+    env = {"helixReturn": 1, "task": e.get("task") or ((doc.get("ai") or {}).get("work") or {}).get("task", ""), "doc": m["id"],
+           "base": m["rev"]["parent"], "result": m["rev"]["hash"], "summary": e.get("summary", ""), "blocks": e.get("blocks", []),
+           "status": e.get("status") or "submitted", "humanReview": bool(e.get("review")), "questions": e.get("questions", []), "next": e.get("next", "")}
+    out = check_return(env, doc_path, base_path, from_file=True)
+    out["report"] = prune({"by": e.get("by", ""), "kind": e.get("kind", ""), "at": e.get("at", ""), "from": e.get("label") and _prev_label(m), "to": m["rev"]["label"],
+                           "summary": env["summary"], "questions": env["questions"], "next": env["next"], "needs_review": env["humanReview"],
+                           "checks": e.get("checks", ""), "file": os.path.basename(doc_path)})
+    return out
+
+
+def _prev_label(m):
+    for e in reversed(m["log"][:-1]):
+        if e.get("label") and e.get("label") != m["rev"]["label"]:
+            return e["label"]
+    return ""
+
+
+def check_return(env, doc_path=None, base_path=None, base_dir=".", from_file=False):
     """Validate an AI's return envelope. A return is a claim: this checks it is consistent, never that work was approved."""
     problems, notes = [], []
     if not isinstance(env, dict) or env.get("helixReturn") != 1:
         return {"ok": False, "problems": ["not a Helix return (it needs \"helixReturn\": 1)"], "notes": []}
     for k in ("task", "doc", "base", "summary"):
         if not trim(_s(env.get(k))):
-            problems.append("missing " + k)
+            (notes if from_file and k in ("task", "summary") else problems).append(("no " if from_file else "missing ") + k + (" in the newest log entry" if from_file else ""))
     if env.get("base") and not re.fullmatch(_HASH, _s(env.get("base"))):
         problems.append("base is not a revision hash")
     st = env.get("status") or "submitted"
@@ -3125,8 +3178,9 @@ def build_doc_from_spec(spec, base_dir=".", shrink=True, today=None, now=None):
         m["created"] = m["created"] or stamp
         m["modified"] = m["modified"] or m["created"]
         if not m["log"]:
-            m["log"] = [prune({"rev": m["rev"]["n"], "label": m["rev"]["label"], "at": m["created"], "by": by, "kind": kind,
-                               "summary": _s(spec.get("summary")) or ("Created" if m["rev"]["n"] == 1 else "")})]
+            m["log"] = [norm_entry({"rev": m["rev"]["n"], "label": m["rev"]["label"], "at": m["created"], "by": by, "kind": kind,
+                                    "summary": _s(spec.get("summary")) or ("Created" if m["rev"]["n"] == 1 else ""), "status": spec.get("status"),
+                                    "task": spec.get("task"), "questions": spec.get("questions"), "next": spec.get("next"), "review": spec.get("review")})]
     elif fresh != had:
         n = m["rev"]["n"] + 1
         label = bump_label(m["rev"]["label"], bool(spec.get("major")))
@@ -3248,8 +3302,10 @@ Working in small pieces (for AI assistants; output is JSON):
       What changed between two revisions, block by block.
   python helix.py check document.helix.html --json
       The checks above as JSON.
+  python helix.py return-check --doc returned.helix.html [--base original.helix.html]
+      Read and check the report an AI left in a returned file (its newest Revision Log entry).
   python helix.py return-check return.json [--doc returned.helix.html] [--base original.helix.html]
-      Validate an AI's return against the original and the returned file.
+      The same for a separate return (for assistants that could only send a patch).
 
 Standard library only. Photos in Images blocks are scaled to 1600 px if Pillow is installed (--no-shrink to keep them).
 """
@@ -3325,6 +3381,10 @@ def main(argv):
         if cmd == "diff" and len(args) == 2:
             emit(diff_documents(args[0], args[1], "--brief" in flags))
             return 0
+        if cmd == "return-check" and len(args) == 0 and opts.get("--doc"):
+            res = handback(opts["--doc"], opts.get("--base"))
+            emit(res)
+            return 0 if res["ok"] else 1
         if cmd == "return-check" and len(args) == 1:
             env = json.load(open(args[0], encoding="utf-8"))
             res = check_return(env, opts.get("--doc"), opts.get("--base"), os.path.dirname(os.path.abspath(args[0])))

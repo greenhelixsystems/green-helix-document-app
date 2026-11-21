@@ -9,7 +9,7 @@ AI-native documents: identity, revisions, AI Notes and work handoffs. The format
 ### Format
 - **Document identity and revisions.** `id` (permanent), `rev` (`n`, the visible `label` such as `1.1`, a content `hash` and the `parent` hash), `created`, `modified` and an optional `source`.
 - **AI Notes** (`ai`): `notes` (Markdown), `focus` and `protect` (block or tab ids), and an optional assignment `work` (task, stage, role, assignee, status, objective, instructions, targets, sources, deliverables, definition of done, review, base). Placed near the top of the data block so readers meet it first.
-- **Revision Log** (`log`): who changed what and when, which blocks, the status they claim and the checks run. Statuses separate claims (`submitted`, `validated`) from review and approval, which a patch or return can never record.
+- **Revision Log** (`log`): who changed what and when, which blocks, the status they claim and the checks run. Each entry can also carry the reviser's handback (`task`, `questions`, `next`, `review`), so a returned file is its own report: one file passes between assistants with nothing beside it. Statuses separate claims (`submitted`, `validated`) from review and approval, which a patch or return can never record.
 - The visible page shows **AI Notes** and **Revision Log** as collapsed buttons under the title, never printed. Documents without them look as before (apart from a Revision Log button once a version is recorded).
 - The "About this file" note now tells AI assistants to read the AI Notes first, read only the focus unless asked for a full review, and how to record a revision.
 - A file whose data changed without a new revision fails `check`.
@@ -21,7 +21,7 @@ AI-native documents: identity, revisions, AI Notes and work handoffs. The format
 - Saving changed content records one revision per editing session and names the file `Title_v1.1.helix.html`. Saving unchanged content keeps the revision. When the version changes, the editor asks where to save rather than overwriting the previous version.
 
 ### helix.py
-- New commands: `outline` and `get` (read only the data block, never attachments; `get --focus` returns just the focus with the base hash), `asset`, `patch` (set, insert, delete, move, ai, title, attach; conflict detection, protected sections, automatic version and log entry), `diff`, `check --json` and `return-check`.
+- New commands: `outline` and `get` (read only the data block, never attachments; `get --focus` returns just the focus with the base hash), `asset`, `patch` (set, insert, delete, move, ai, title, attach; conflict detection, protected sections, automatic version and log entry), `diff`, `check --json` and `return-check` (from a returned file alone, or from a separate return for assistants without code).
 - `unpack` keeps every id and the revision record; `build` of an unchanged unpacked spec gives an identical file, and a changed one becomes the next revision.
 - Specs may give blocks friendly ids (`"budget"`) for AI Notes to point at; `build` maps them to real ids. `by` and `kind` record who created the document; `--now` makes builds reproducible.
 

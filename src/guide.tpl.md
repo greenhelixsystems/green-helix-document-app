@@ -138,34 +138,47 @@ A log `status` may be `started`, `submitted`, `validated`, `blocked` or `changes
 
 **Before you hand back**, add to the AI Notes what the next reader needs (what you changed, open questions), and move `focus` to the next piece of work if the notes ask you to.
 
-## 3B. Handing work back: the return envelope
+## 3B. Handing work back: one file
 
-When an app or a person assigned you the work, return three things:
-
-1. The revised file (`Name_v1.1.helix.html`), or, if you could not run code, a patch.
-2. A small JSON **return envelope**:
+Hand back **one file**: the revised `Name_v1.1.helix.html`. Your report travels inside it, in your Revision Log entry, which `patch` writes from the patch's `log`:
 
 ```json
-{"helixReturn": 1,
- "task": "SHED-2",
- "doc": "hx-5f0c2a9e7b1d3c4e",
- "base": "HASH OF THE REVISION YOU WORKED FROM",
- "result": "HASH OF THE NEW REVISION (from patch output)",
- "file": "Garden_Shed_v1.1.helix.html",
- "summary": "Added roofing and a total to the budget.",
- "blocks": ["a322e27472ce0"],
- "outputs": [],
- "checks": [{"name": "helix check", "result": "pass"}],
- "questions": ["Is the lumber quote still valid?"],
- "next": "Owner confirms the lumber price.",
- "humanReview": true,
- "status": "submitted"}
+"log": {"by": "Claude", "kind": "ai", "summary": "Added roofing and a total to the budget.",
+        "status": "submitted", "task": "SHED-2",
+        "questions": ["Is the lumber quote still valid?"],
+        "next": "Owner confirms the lumber price.",
+        "review": true}
 ```
 
-   With no code tool, leave out `result` and `file` and put your ops in `"patch": {"ops": [...], "log": {...}}`. The receiver applies it with `helix.py patch document.helix.html return.json`, which runs the same conflict and protection checks.
-3. A two or three line summary for the person.
+| Field | Meaning |
+|---|---|
+| `summary` | What you did, in a sentence. |
+| `status` | `submitted` normally; `blocked` or `changes` if you could not finish. |
+| `task` | The assignment's id (taken from `ai.work.task` if you leave it out). |
+| `questions` | Open questions for the person or the next assistant. |
+| `next` | The next step you propose. |
+| `review` | `true` when a person should look before the work goes further. |
 
-The receiver checks a return with `python helix.py return-check return.json --base original.helix.html --doc returned.helix.html`. A return is a **claim** that work was done. It is never evidence that anyone reviewed or approved it, and a return that claims `reviewed` or `approved` fails.
+`patch` adds the rest itself: the blocks that changed, its own check result, the time and the new version. Everyone who opens the file sees the report under **Revision Log**. The next assistant sees it in `outline`. If the notes ask, also add your questions to the AI Notes with `notes_append`.
+
+The receiver checks a returned file on its own:
+
+```
+python helix.py return-check --doc Name_v1.1.helix.html --base Name_v1.helix.html
+```
+
+It confirms the file is the same document, follows the revision it was given, passed its checks and left protected sections alone. It also prints the report (who, summary, questions, next step, needs review) as JSON. `--base` is optional.
+
+A report is a **claim** that work was done. It is never evidence that anyone reviewed or approved it. A patch cannot record `reviewed` or `approved`.
+
+**Without a code tool** you cannot write the file. Send a short JSON return instead and let the person apply it with `helix.py patch document.helix.html return.json`, which runs the same checks and produces the one file:
+
+```json
+{"helixReturn": 1, "task": "SHED-2", "doc": "hx-5f0c2a9e7b1d3c4e", "base": "HASH OF THE REVISION YOU READ",
+ "summary": "...", "questions": ["..."], "next": "...", "humanReview": true, "status": "submitted",
+ "patch": {"ops": [{"op": "set", "id": "a322e27472ce0", "rows": [["Item", "Cost"], ["Total", "2,100"]]}],
+           "log": {"by": "YOUR NAME", "kind": "ai"}}}
+```
 
 **An assignment** (`ai.work`) can carry: `task`, `stage`, `role`, `assignee`, `status` (`assigned`, `started`, ...), `objective`, `instructions`, `targets` (block ids to work on), `sources` (block or attachment ids to read), `deliverables`, `done` (definition of done), `review`, and `base` (the revision it was written against). Every field is optional and all of them are shown to readers in the AI Notes.
 
@@ -372,7 +385,7 @@ If the file is over 25 MB, do not silently drop content. Tell the user and ask w
 
 Embedding files needs base64 and SHA-256, which cannot be done reliably by hand. Without a code tool, tell the user plainly that you cannot make the document, and offer a Markdown version of the content instead. They can paste it into a Markdown block in the editor and add the files there.
 
-To **revise** a document without code: read the JSON at the top of the file (stop at `</script>`), work on the focus blocks, and reply with a return envelope that carries a `patch` (section 3B). The person applies it with `helix.py patch`.
+To **revise** a document without code: read the JSON at the top of the file (stop at `</script>`), work on the focus blocks, and reply with a short JSON return that carries a `patch` (section 3B). The person applies it with `helix.py patch`, which produces the one file.
 
 ## 10. Opening, editing and sharing
 
@@ -406,6 +419,7 @@ python helix.py asset document.helix.html ID output-file
 python helix.py patch document.helix.html patch.json [-o out.helix.html] [--allow-protected] [--force] [--as-human]
 python helix.py diff old.helix.html new.helix.html [--brief]
 python helix.py check document.helix.html --json
+python helix.py return-check --doc returned.helix.html [--base original.helix.html]
 python helix.py return-check return.json [--doc returned.helix.html] [--base original.helix.html]
 ```
 
@@ -471,7 +485,7 @@ Keys appear in that order, so a reader meets the identity and the AI Notes first
 - `spec` is the feature level (`"1.1"`). `version` stays `1` because every version 1 file is still valid; it rises only for changes old readers cannot understand. Software that finds a higher `version` must not save over the file.
 - `id` identifies the document across revisions. `rev.n` counts revisions, `rev.label` is the version people see (`1`, `1.1`, `2`), `rev.parent` is the previous revision's hash.
 - `rev.hash` is the SHA-256 of the canonical JSON (keys sorted, no spaces, UTF-8) of `{"title", "subtitle", "options", "tabs", "assets": {id: sha256}, "ai"}`, with `ai` only when present. It changes when the content changes and not when only the log or timestamps do.
-- `log` entries: `rev`, `label`, `at`, `by`, `kind` (`human`, `ai`, `tool`), `summary`, `blocks` (ids changed), `status`, `checks`, `note`.
+- `log` entries: `rev`, `label`, `at`, `by`, `kind` (`human`, `ai`, `tool`), `summary`, `blocks` (ids changed), `status`, `checks`, `note`, and the handback: `task`, `questions`, `next`, `review` (`true` when a person should look).
 
 - Ids are the letter `a` followed by 6 to 24 lowercase letters or digits, unique within the file.
 - Every `<` inside the block is written as `\u003c`, so the data can never close the script tag. Any JSON parser reads it back normally.

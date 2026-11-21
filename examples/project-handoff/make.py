@@ -3,7 +3,8 @@
 
     python examples/project-handoff/make.py
 
-Writes Community-Garden-Launch_v1.helix.html, patch.json, Community-Garden-Launch_v1.1.helix.html and return.json.
+Writes Community-Garden-Launch_v1.helix.html, patch.json and Community-Garden-Launch_v1.1.helix.html.
+The revised file is the whole handback: its newest Revision Log entry is the reviewer's report.
 Everything here is invented example data. The id and times are fixed so the files are reproducible.
 """
 import json, os, subprocess, sys
@@ -39,17 +40,12 @@ patch = {
         {"op": "ai", "notes_append": "## From the reviewer AI (v1.1)\n\nAdded a 10% contingency and a total to the budget. "
                                      "Open question: does the water line estimate include the 40 ft run in the site notes?"},
     ],
-    "log": {"by": "Reviewer AI", "kind": "ai", "summary": "Added contingency and total to the budget", "status": "submitted"},
+    "log": {"by": "Reviewer AI", "kind": "ai", "summary": "Added a 10% contingency and a total to the budget.", "status": "submitted",
+            "questions": ["Does the water line estimate include the 40 ft run in the site notes?"],
+            "next": "The project lead confirms the water line estimate.", "review": True},
 }
 json.dump(patch, open(os.path.join(HERE, "patch.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
 out = json.loads(run("patch", V1, "patch.json", "--now", "2026-11-21T16:30:00Z"))
 
-# 3. The return envelope the app reads back.
-d1, d11 = data_of(V1), data_of(V11)
-ret = {"helixReturn": 1, "task": d1["ai"]["work"]["task"], "doc": d11["id"], "base": d1["rev"]["hash"], "result": d11["rev"]["hash"],
-       "file": V11, "summary": "Added a 10% contingency and a total to the budget.", "blocks": out["changed"], "outputs": [],
-       "checks": [{"name": "helix check", "result": "pass"}],
-       "questions": ["Does the water line estimate include the 40 ft run?"],
-       "next": "The project lead confirms the water line estimate.", "humanReview": True, "status": "submitted"}
-json.dump(ret, open(os.path.join(HERE, "return.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
-print(run("return-check", "return.json", "--doc", V11, "--base", V1))
+# 3. The receiver reads the report from the returned file itself.
+print(run("return-check", "--doc", V11, "--base", V1))
