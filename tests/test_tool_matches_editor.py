@@ -8,6 +8,10 @@ sp = importlib.util.spec_from_file_location("hlx", TOOL); hlx = importlib.util.m
 sys.setrecursionlimit(30000)
 random.seed(int(os.environ.get("SEED", "1115")))
 ok = []
+def data_of(html):
+    return json.loads(re.search(r'id="doc-source">(.*?)</script>', html, re.S).group(1))
+
+
 def check(name, cond, extra=""):
     ok.append(bool(cond)); print(("PASS " if cond else "FAIL ") + name + ((" | " + str(extra)[:300]) if extra != "" else ""))
 sha = lambda b: hashlib.sha256(b).hexdigest()
@@ -239,8 +243,11 @@ with sync_playwright() as p:
     open(T + "/n.md", "w", encoding="utf-8").write("# Hi\n\n**x**\n"); r = cli("md", "n.md"); check("cli md prints HTML", r.stdout.strip() == "<h3>Hi</h3><p><strong>x</strong></p>", r.stdout)
     check("cli with no arguments shows usage", "build spec.json" in cli().stdout)
     # 9. same input, same output
-    h_a, _ = hlx.build_from_spec(base_spec, T + "/in", shrink=False); h_b, _ = hlx.build_from_spec(base_spec, T + "/in", shrink=False)
-    check("building twice gives identical files", h_a == h_b)
+    fixed = dict(base_spec, id="hx-0123456789abcdef")
+    h_a, _ = hlx.build_from_spec(fixed, T + "/in", shrink=False, now="2026-01-02T03:04:05Z"); h_b, _ = hlx.build_from_spec(fixed, T + "/in", shrink=False, now="2026-01-02T03:04:05Z")
+    check("building twice with the same id and time gives identical files", h_a == h_b)
+    h_c, _ = hlx.build_from_spec(base_spec, T + "/in", shrink=False); h_d, _ = hlx.build_from_spec(base_spec, T + "/in", shrink=False)
+    check("two new documents built from one spec get different document ids", data_of(h_c)["id"] != data_of(h_d)["id"] and data_of(h_c)["id"].startswith("hx-"))
     check("no editor errors", not errs, errs[:2])
     b.close()
 

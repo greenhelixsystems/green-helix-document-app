@@ -103,6 +103,87 @@ def _render_block(b, doc, assets):
     return ""
 
 
+def _name_of(doc, assets, id_):
+    """A readable name for a tab, block or attachment id (used in AI Notes and the Revision Log)."""
+    for i, t in enumerate(doc["tabs"]):
+        if t["id"] == id_:
+            return _tab_name(t, i)
+        for b in t["blocks"]:
+            if b["id"] == id_:
+                return trim(b["text"] if b["type"] == "heading" else b["title"]) or LABEL[b["type"]] + " block"
+    if id_ in assets:
+        return assets[id_]["name"]
+    return id_
+
+
+def _names(doc, assets, ids):
+    return esc(", ".join(_name_of(doc, assets, x) for x in ids))
+
+
+def _work_html(doc, assets, w):
+    rows = ""
+    for key, label in (("task", "Task"), ("stage", "Stage"), ("role", "Role"), ("assignee", "Assigned to"), ("objective", "Objective")):
+        if trim(w.get(key, "")):
+            rows += "<dt>" + label + "</dt><dd>" + esc(trim(w[key])) + "</dd>"
+    if w.get("status"):
+        rows += "<dt>Status</dt><dd>" + WORK[w["status"]] + "</dd>"
+    for key, label in (("targets", "Work on"), ("sources", "Read")):
+        if w.get(key):
+            rows += "<dt>" + label + "</dt><dd>" + _names(doc, assets, w[key]) + "</dd>"
+    if _paras(w.get("instructions", "")):
+        rows += "<dt>Instructions</dt><dd>" + "".join("<p>" + esc(trim(p)) + "</p>" for p in _paras(w["instructions"])) + "</dd>"
+    for key, label in (("deliverables", "Deliverables"), ("done", "Done when")):
+        if w.get(key):
+            rows += "<dt>" + label + "</dt><dd><ul>" + "".join("<li>" + esc(trim(x)) + "</li>" for x in w[key]) + "</ul></dd>"
+    if trim(w.get("review", "")):
+        rows += "<dt>Review</dt><dd>" + esc(trim(w["review"])) + "</dd>"
+    if w.get("base"):
+        rows += "<dt>Based on</dt><dd><code>" + w["base"][:12] + "</code></dd>"
+    return '<p class="hxk"><strong>Assignment</strong></p><dl class="hxw">' + rows + "</dl>" if rows else ""
+
+
+def _log_li(doc, assets, e):
+    bits = ["<strong>v" + esc(e.get("label") or str(e.get("rev", 0))) + "</strong>"]
+    if e.get("at"):
+        bits.append(e["at"][:10] + " " + e["at"][11:16] + " UTC")
+    who = trim(e.get("by", "")) + (" (" + KINDS[e["kind"]] + ")" if e.get("kind") else "")
+    if trim(who):
+        bits.append(esc(trim(who)))
+    li = "<li>" + " \u00b7 ".join(bits) + (": " + esc(trim(e["summary"])) if trim(e.get("summary", "")) else "")
+    if e.get("status"):
+        li += ' <span class="hxs">' + WORK[e["status"]] + "</span>"
+    if e.get("blocks"):
+        li += '<br><span class="hxm">Changed: ' + _names(doc, assets, e["blocks"]) + "</span>"
+    if trim(e.get("checks", "")):
+        li += '<br><span class="hxm">Checks: ' + esc(trim(e["checks"])) + "</span>"
+    if trim(e.get("note", "")):
+        li += '<br><span class="hxm">' + esc(trim(e["note"])) + "</span>"
+    return li + "</li>"
+
+
+def hx_panels(doc, assets):
+    """The AI Notes and Revision Log buttons under the title. Both are collapsed and never printed."""
+    out = ""
+    ai = doc.get("ai")
+    if ai:
+        p = ""
+        if trim(ai.get("notes", "")):
+            p += '<div class="rich md">' + md_render(ai["notes"]) + "</div>"
+        for key, label in (("focus", "Focus"), ("protect", "Do not change")):
+            if ai.get(key):
+                p += '<p class="hxk"><strong>' + label + ":</strong> " + _names(doc, assets, ai[key]) + "</p>"
+        if ai.get("work"):
+            p += _work_html(doc, assets, ai["work"])
+        if p:
+            out += '<details class="hx"><summary>AI Notes</summary>\n' + p + "</details>\n"
+    log = doc["meta"]["log"]
+    if log:
+        lab = doc["meta"]["rev"]["label"]
+        out += ('<details class="hx"><summary>Revision Log' + (' <span class="hxv">v' + esc(lab) + "</span>" if lab else "") + '</summary>\n<ul class="hxl">'
+                + "".join(_log_li(doc, assets, e) for e in reversed(log)) + "</ul></details>\n")
+    return '<div class="hxbar">\n' + out + "</div>\n" if out else ""
+
+
 def _render_tab(t, doc, assets):
     parts = []
     toc = []
@@ -149,11 +230,48 @@ def data_block(doc, assets):
     meta = {}
     for id_, a in assets.items():
         meta[id_] = {"name": a["name"], "type": a["type"], "bytes": a["bytes"], "sha256": fingerprint(a)}
-    head = {"format": "helix", "version": FORMAT_VERSION}
+    m = doc["meta"]
+    head = {"format": "helix", "version": FORMAT_VERSION, "spec": SPEC, "id": m["id"], "rev": prune(m["rev"])}
+    for k in ("created", "modified", "source"):
+        if m.get(k):
+            head[k] = m[k]
     if doc["options"]["about"]:
         head["about"] = ABOUT_JSON
+    if doc.get("ai"):
+        head["ai"] = doc["ai"]
     head.update({"title": doc["title"], "subtitle": doc["subtitle"], "options": doc["options"], "tabs": doc["tabs"], "assets": meta})
+    if m["log"]:
+        head["log"] = m["log"]
     return head
+
+
+def _canon(obj):
+    """Canonical JSON (sorted keys, no spaces) exactly as the editor's canon() writes it."""
+    s = json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return re.sub("[\ud800-\udfff]", lambda m: "\\u%04x" % ord(m.group(0)), s)
+
+
+def content_hash(doc, assets):
+    """SHA-256 of the document's content: everything except the revision record, timestamps and log."""
+    c = {"title": doc["title"], "subtitle": doc["subtitle"], "options": doc["options"], "tabs": doc["tabs"],
+         "assets": dict((k, fingerprint(a)) for k, a in assets.items())}
+    if doc.get("ai"):
+        c["ai"] = doc["ai"]
+    return hashlib.sha256(_canon(c).encode("utf-8")).hexdigest()
+
+
+def bump_label(label, major=False):
+    """1 -> 1.1 -> 1.2; major: 1.2 -> 2."""
+    parts = label.split(".") if re.fullmatch(_LABEL, label or "") else ["1"]
+    if major:
+        return str(int(parts[0]) + 1)
+    if len(parts) == 1:
+        return parts[0] + ".1"
+    return ".".join(parts[:-1] + [str(int(parts[-1]) + 1)])
+
+
+def now_iso():
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def render(doc, assets, today=None):
@@ -199,7 +317,7 @@ def render(doc, assets, today=None):
     return ('<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n'
             + '<meta http-equiv="Content-Security-Policy" content="' + DOC_CSP + '">\n<meta name="generator" content="' + GENERATOR + '">\n'
             + "<title>" + esc(title) + '</title>\n<script type="application/json" id="doc-source">' + source + "</script>\n<style>" + DOC_CSS + tint + tabcss + "</style>\n</head>\n<body>\n<main>\n"
-            + h1 + body + foot + (about_html(n_files > 0) if doc["options"]["about"] else "") + "</main>\n</body>\n</html>\n")
+            + h1 + hx_panels(doc, assets) + body + foot + (about_html(n_files > 0) if doc["options"]["about"] else "") + "</main>\n</body>\n</html>\n")
 
 
 # ---------------------------------------------------------------------------
@@ -257,6 +375,97 @@ class IdMaker(object):
     def next(self):
         self.n += 1
         return "a" + hashlib.sha1(("%s/%d" % (self.seed, self.n)).encode("utf-8")).hexdigest()[:12]
+
+
+# Version 1.1 metadata: document identity, revision record, AI Notes and Revision Log.
+# Every rule here has a twin in the editor's loader, so both read a file the same way.
+_ID = r"[A-Za-z0-9][A-Za-z0-9._:-]{0,63}"
+_DOCID = r"[A-Za-z0-9][A-Za-z0-9._:-]{5,63}"
+_HASH = r"[0-9a-f]{64}"
+_TIME = r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z"
+_LABEL = r"[0-9]{1,6}(?:\.[0-9]{1,6}){0,3}"
+
+
+def prune(o):
+    """Drop empty values ('' , [] and None) so the data block stays small."""
+    return dict((k, v) for k, v in o.items() if not (v is None or (isinstance(v, str) and v == "") or (isinstance(v, list) and not v)))
+
+
+def _match(rx, x):
+    return x if isinstance(x, str) and re.fullmatch(rx, x) else ""
+
+
+def _int(x):
+    if isinstance(x, bool) or not isinstance(x, (int, float)) or x != x or x < 0 or x > 1e9 or x != int(x):
+        return 0
+    return int(x)
+
+
+def _lf(s):
+    return s.replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _ids(v, known=None):
+    out = []
+    for x in (v if isinstance(v, list) else []):
+        if isinstance(x, str) and re.fullmatch(_ID, x) and x not in out and (known is None or x in known):
+            out.append(x)
+    return out
+
+
+def _strs(v):
+    return [x for x in v if isinstance(x, str) and trim(x)] if isinstance(v, list) else []
+
+
+def norm_work(w):
+    if not isinstance(w, dict):
+        return None
+    o = prune({"task": _s(w.get("task")), "stage": _s(w.get("stage")), "role": _s(w.get("role")), "assignee": _s(w.get("assignee")),
+               "status": w.get("status") if _has(WORK, w.get("status")) else "", "objective": _lf(_s(w.get("objective"))),
+               "instructions": _lf(_s(w.get("instructions"))), "targets": _ids(w.get("targets")), "sources": _ids(w.get("sources")),
+               "deliverables": _strs(w.get("deliverables")), "done": _strs(w.get("done")), "review": _lf(_s(w.get("review"))),
+               "base": _match(_HASH, w.get("base"))})
+    return o or None
+
+
+def norm_ai(a, known):
+    if not isinstance(a, dict):
+        return None
+    o = prune({"notes": _lf(_s(a.get("notes"))), "focus": _ids(a.get("focus"), known), "protect": _ids(a.get("protect"), known), "work": norm_work(a.get("work"))})
+    return o or None
+
+
+def norm_entry(e):
+    if not isinstance(e, dict):
+        return None
+    return prune({"rev": _int(e.get("rev")), "label": _match(_LABEL, e.get("label")), "at": _match(_TIME, e.get("at")), "by": _s(e.get("by")),
+                  "kind": e.get("kind") if _has(KINDS, e.get("kind")) else "", "summary": _lf(_s(e.get("summary"))), "blocks": _ids(e.get("blocks")),
+                  "status": e.get("status") if _has(WORK, e.get("status")) else "", "checks": _lf(_s(e.get("checks"))), "note": _lf(_s(e.get("note")))})
+
+
+def norm_meta(data):
+    rev = data.get("rev") if isinstance(data.get("rev"), dict) else {}
+    src = data.get("source") if isinstance(data.get("source"), dict) else {}
+    log = data.get("log") if isinstance(data.get("log"), list) else []
+    return {"id": _match(_DOCID, data.get("id")),
+            "rev": {"n": _int(rev.get("n")), "label": _match(_LABEL, rev.get("label")), "hash": _match(_HASH, rev.get("hash")), "parent": _match(_HASH, rev.get("parent"))},
+            "created": _match(_TIME, data.get("created")), "modified": _match(_TIME, data.get("modified")),
+            "source": prune({"system": _s(src.get("system")), "ref": _s(src.get("ref"))}) or None,
+            "log": [x for x in (norm_entry(e) for e in log) if x is not None]}
+
+
+def new_doc_id():
+    import secrets
+    return "hx-" + secrets.token_hex(8)
+
+
+def known_ids(doc):
+    s = set()
+    for t in doc["tabs"]:
+        s.add(t["id"])
+        for b in t["blocks"]:
+            s.add(b["id"])
+    return s
 
 
 def load_data(data, find, ids=None):
@@ -388,4 +597,15 @@ def load_data(data, find, ids=None):
         lg = take(op["logo"])
         if lg:
             nd["options"]["logo"] = lg
+    nd["ai"] = norm_ai(data.get("ai"), known_ids(nd))
+    m = norm_meta(data)
+    if not m["id"]:
+        m["id"] = new_doc_id()
+    if m["rev"]["n"] < 1:
+        m["rev"]["n"] = 1
+    if not m["rev"]["label"]:
+        m["rev"]["label"] = str(m["rev"]["n"])
+    if not m["rev"]["hash"]:
+        m["rev"]["hash"] = content_hash(nd, assets)
+    nd["meta"] = m
     return nd, assets, state["missing"], state["bad"]

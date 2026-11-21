@@ -104,6 +104,15 @@ button.icon svg{display:block;margin:3px 0}
 select{font:inherit;font-size:15px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:inherit}
 .flist .name input{margin-top:5px;font-size:14px;padding:4px 8px}
 label.opt{display:inline-flex;gap:8px;align-items:center}
+.metabar{display:flex;flex-wrap:wrap;gap:8px;margin:-8px 0 20px}
+.metabox{border:1px solid var(--line);border-radius:999px;padding:5px 14px;background:var(--card);font-size:14px}
+.metabox[open]{flex:1 1 100%;border-radius:12px;padding:12px 16px;display:grid;gap:10px}
+.metabox summary{cursor:pointer;font-weight:600;color:var(--accent-text)}
+.metabox p{margin:0}
+table.scope{border-collapse:collapse;width:100%;font-size:14px}table.scope th,table.scope td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line)}table.scope td.c,table.scope th.c{text-align:center;width:110px}
+table.scope input{width:18px;height:18px;accent-color:var(--accent)}
+.loglist{list-style:none;margin:0;padding:0;font-size:14px}.loglist li{padding:6px 0;border-bottom:1px solid var(--line)}
+.revrow{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}.revrow input[type=text]{flex:1 1 260px;width:auto}
 label.opt input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);flex:none}
 .toolrow{display:flex;flex-wrap:wrap;gap:8px}
 #blocks{margin-bottom:16px}
@@ -223,6 +232,20 @@ button,button.icon,button.mini,.ins button{min-height:40px;min-width:40px}
 <main>
 <input type="text" id="doc-title" class="title" placeholder="Document title" aria-label="Document title">
 <input type="text" id="doc-sub" class="subtitle" placeholder="Short description (optional)" aria-label="Short description">
+<div class="metabar">
+<details id="ai-box" class="metabox"><summary>AI Notes <span class="small" id="ai-sum"></span></summary>
+<p class="small">Instructions for AI assistants working on this document: its purpose, what to read, what to leave alone, quality expectations and open questions. Readers see them behind an “AI Notes” button under the title. They are never printed.</p>
+<textarea id="ai-notes" rows="6" aria-label="AI Notes" placeholder="For example: Revise only the Budget section. Keep the client's wording in the Summary. Flag anything you are unsure about at the end of these notes."></textarea>
+<div id="ai-scope"></div>
+<div id="ai-work"></div>
+</details>
+<details id="log-box" class="metabox"><summary>Revision Log <span class="small" id="log-sum"></span></summary>
+<div id="log-list"></div>
+<div class="revrow"><label for="rev-note" class="small">Note for this save</label><input type="text" id="rev-note" placeholder="What changed (optional)" aria-label="Note for this save"></div>
+<div class="revrow"><label class="opt"><input type="checkbox" id="rev-major"> Make this save a new major version</label>
+<button type="button" id="rev-new" class="mini">Start a new version on the next save</button></div>
+</details>
+</div>
 <div id="tabstrip" role="group" aria-label="Tabs"></div>
 <div id="blocks"></div>
 <div id="empty">Add your first block below, drag files anywhere onto this page, or choose New for a starter template.</div>
@@ -263,6 +286,9 @@ var DUP_ICON='<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke
 var LABEL={heading:'Heading',text:'Text',markdown:'Markdown',images:'Images',table:'Table',collapsible:'Collapsible',checklist:'Checklist',callout:'Callout',files:'Files'};
 var STATUS={draft:'Draft',review:'For review',final:'Final'};
 var TONES={note:'Note',important:'Important',warning:'Warning'};
+var SPEC='1.1';
+var WORK={assigned:'Assigned',started:'Started',submitted:'Submitted',validated:'Checks reported',reviewed:'Review reported',approved:'Approval reported',blocked:'Blocked',changes:'Changes requested'};
+var KINDS={human:'person',ai:'AI',tool:'tool'};
 var DOC_CSS=':root{--bg:#f6f5f1;--card:#fff;--ink:#1f2328;--muted:#5d646c;--line:#dcd9d0;--accent:#4B8747;--accent-ink:#fff;--accent-text:#3d7039;--link:#b4481e;--imp-bg:#fbefd5;--imp-ink:#7a4d00;--warn-bg:#fce9e9;--warn-ink:#8f2424}'
 +'@media (prefers-color-scheme:dark){:root{--bg:#16181b;--card:#1f2226;--ink:#e8e6e1;--muted:#a2a8ae;--line:#34383d;--accent:#8fcf8a;--accent-ink:#10240f;--accent-text:#8fcf8a;--link:#f2a071;--imp-bg:#3a2e12;--imp-ink:#f0c36a;--warn-bg:#3d1b1b;--warn-ink:#f2a3a3}}'
 +'*{box-sizing:border-box}'
@@ -360,10 +386,15 @@ var DOC_CSS=':root{--bg:#f6f5f1;--card:#fff;--ink:#1f2328;--muted:#5d646c;--line
 +'.md pre{break-inside:avoid;white-space:pre-wrap}.md pre code{white-space:pre-wrap}.status,.status.st-review,.status.st-final{background:#fff;color:#000;border-color:#000}.logo{background:none!important;padding:0!important}'
 +'details.about{display:none!important}'
 +'summary{list-style:none}summary::-webkit-details-marker{display:none}}'
-+'@media (max-width:560px){section{padding:16px}th,td{padding:8px 6px}}';
++'@media (max-width:560px){section{padding:16px}th,td{padding:8px 6px}}'
++'.hxbar{display:flex;flex-wrap:wrap;gap:8px;margin:-10px 0 22px}details.hx,details.hx:first-of-type{flex:0 1 auto;border:1px solid var(--line);border-radius:999px;padding:4px 14px;background:var(--card);font-size:14px}'
++'details.hx[open],details.hx[open]:first-of-type{flex:1 1 100%;border-radius:12px;padding:10px 16px 12px}.hx summary{color:var(--accent-text)}.hx .rich{margin-top:10px}.hxk{margin:10px 0 0}.hxv{font-weight:400;color:var(--muted)}'
++'.hxw{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:8px 0 0}.hxw dt{font-weight:600;color:var(--muted)}.hxw dd{margin:0;overflow-wrap:anywhere}.hxw dd p{margin:0 0 6px}.hxw ul{margin:0;padding-left:20px}'
++'.hxl{list-style:none;margin:10px 0 0;padding:0}.hxl li{padding:7px 0;border-top:1px solid var(--line)}.hxl li:first-child{border-top:0}.hxs{display:inline-block;padding:0 8px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--muted)}.hxm{color:var(--muted);font-size:13px}'
++'@media (max-width:560px){.hxw{grid-template-columns:1fr}.hxw dt{margin-top:6px}}@media print{.hxbar{display:none!important}}';
 var DOC_CSP="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'";
 
-var mdTarget=null, lastBad=[], doc, assets, dirty=false, fileHandle=null, fileName='', dragId=null, pickTarget=null, noticeTimer=0;
+var mdTarget=null, lastBad=[], doc, assets, meta, sess, dirty=false, fileHandle=null, fileName='', dragId=null, pickTarget=null, noticeTimer=0;
 var hist=[], hpos=-1, htimer=0, previewing=false, insertAt=null, cur=0;
 function B(){return doc.tabs[cur].blocks;}
 function tabName(t,i){return t.title.trim()||'Tab '+(i+1);}
@@ -733,8 +764,134 @@ function aboutHtml(hasFiles){
     +'<p><strong>For AI assistants and other software</strong></p>\n<ul>'+ABOUT_AI.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>\n</details>\n';
 }
 
+/* ---------- version 1.1: identity, revisions, AI Notes and the Revision Log ----------
+   Every rule here has a twin in tools/helix.py so both read and write a file the same way. */
+var RX_ID=/^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/,RX_DOCID=/^[A-Za-z0-9][A-Za-z0-9._:-]{5,63}$/,RX_HASH=/^[0-9a-f]{64}$/,
+    RX_TIME=/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/,RX_LABEL=/^[0-9]{1,6}(?:\.[0-9]{1,6}){0,3}$/;
+function has(o,k){return typeof k==='string'&&Object.prototype.hasOwnProperty.call(o,k);}
+function prune(o){var r={};Object.keys(o).forEach(function(k){var v=o[k];if(!(v==null||v===''||(Array.isArray(v)&&!v.length)))r[k]=v;});return r;}
+function isEmpty(o){return !o||!Object.keys(o).length;}
+function rx(re,x){return typeof x==='string'&&re.test(x)?x:'';}
+function int0(x){return typeof x==='number'&&isFinite(x)&&x>=0&&x<=1e9&&Math.floor(x)===x?x:0;}
+function lf(s){return s.replace(/\r\n?/g,'\n');}
+function idList(v,known){var out=[];(Array.isArray(v)?v:[]).forEach(function(x){if(typeof x==='string'&&RX_ID.test(x)&&out.indexOf(x)<0&&(!known||known[x]))out.push(x);});return out;}
+function strList(v){return Array.isArray(v)?v.filter(function(x){return typeof x==='string'&&x.trim();}):[];}
+function normWork(w){
+  if(!w||typeof w!=='object'||Array.isArray(w))return null;
+  var o=prune({task:str(w.task),stage:str(w.stage),role:str(w.role),assignee:str(w.assignee),status:has(WORK,w.status)?w.status:'',objective:lf(str(w.objective)),
+    instructions:lf(str(w.instructions)),targets:idList(w.targets),sources:idList(w.sources),deliverables:strList(w.deliverables),done:strList(w.done),review:lf(str(w.review)),base:rx(RX_HASH,w.base)});
+  return isEmpty(o)?null:o;
+}
+function normAi(a,known){
+  if(!a||typeof a!=='object'||Array.isArray(a))return null;
+  var o=prune({notes:lf(str(a.notes)),focus:idList(a.focus,known),protect:idList(a.protect,known),work:normWork(a.work)});
+  return isEmpty(o)?null:o;
+}
+function normEntry(e){
+  if(!e||typeof e!=='object'||Array.isArray(e))return null;
+  return prune({rev:int0(e.rev),label:rx(RX_LABEL,e.label),at:rx(RX_TIME,e.at),by:str(e.by),kind:has(KINDS,e.kind)?e.kind:'',summary:lf(str(e.summary)),
+    blocks:idList(e.blocks),status:has(WORK,e.status)?e.status:'',checks:lf(str(e.checks)),note:lf(str(e.note))});
+}
+function normMeta(data){
+  var r=data.rev&&typeof data.rev==='object'&&!Array.isArray(data.rev)?data.rev:{},s=data.source&&typeof data.source==='object'&&!Array.isArray(data.source)?data.source:{};
+  var src=prune({system:str(s.system),ref:str(s.ref)});
+  return {id:rx(RX_DOCID,data.id),rev:{n:int0(r.n),label:rx(RX_LABEL,r.label),hash:rx(RX_HASH,r.hash),parent:rx(RX_HASH,r.parent)},
+    created:rx(RX_TIME,data.created),modified:rx(RX_TIME,data.modified),source:isEmpty(src)?null:src,
+    log:(Array.isArray(data.log)?data.log:[]).map(normEntry).filter(Boolean)};
+}
+function newDocId(){var u=new Uint8Array(8);crypto.getRandomValues(u);return 'hx-'+Array.prototype.map.call(u,function(x){return ('0'+x.toString(16)).slice(-2);}).join('');}
+function newMeta(){return {id:newDocId(),rev:{n:0,label:'',hash:'',parent:''},created:'',modified:'',source:null,log:[]};}
+function emptyAi(){return {notes:'',focus:[],protect:[],work:null};}
+function knownIds(d){var k={};d.tabs.forEach(function(t){k[t.id]=1;t.blocks.forEach(function(b){k[b.id]=1;});});return k;}
+function aiOut(d){var a=d.ai||{},k=knownIds(d),o=prune({notes:str(a.notes),focus:idList(a.focus,k),protect:idList(a.protect,k),work:a.work||null});return isEmpty(o)?null:o;}
+function canon(v){
+  if(Array.isArray(v))return '['+v.map(canon).join(',')+']';
+  if(v&&typeof v==='object')return '{'+Object.keys(v).sort().map(function(k){return JSON.stringify(k)+':'+canon(v[k]);}).join(',')+'}';
+  return JSON.stringify(v);
+}
+function contentHash(d,as){
+  var m={};as.forEach(function(a,id){m[id]=fingerprint(a);});
+  var c={title:d.title,subtitle:d.subtitle,options:d.options,tabs:d.tabs,assets:m},ai=aiOut(d);if(ai)c.ai=ai;
+  return sha256(new TextEncoder().encode(canon(c)));
+}
+function bumpLabel(label,major){
+  var p=RX_LABEL.test(label||'')?label.split('.'):['1'];
+  if(major)return String(+p[0]+1);
+  if(p.length===1)return p[0]+'.1';
+  p[p.length-1]=String(+p[p.length-1]+1);return p.join('.');
+}
+function nowIso(){return new Date().toISOString().slice(0,19)+'Z';}
+function effRev(){var r=meta.rev;return r.n<1?{n:1,label:'1',hash:contentHash(doc,assets),parent:''}:r;}
+function nameOf(id){
+  var out=null;
+  doc.tabs.forEach(function(t,i){if(out!=null)return;if(t.id===id){out=tabName(t,i);return;}
+    t.blocks.forEach(function(b){if(out==null&&b.id===id)out=(b.type==='heading'?b.text:b.title).trim()||LABEL[b.type]+' block';});});
+  if(out==null&&assets.has(id))out=assets.get(id).name;
+  return out==null?id:out;
+}
+function names(ids){return esc(ids.map(nameOf).join(', '));}
+function paras(t){return t.split(/\n+/).filter(function(p){return p.trim();});}
+function workHtml(w){
+  var rows='';
+  [['task','Task'],['stage','Stage'],['role','Role'],['assignee','Assigned to'],['objective','Objective']].forEach(function(p){if(str(w[p[0]]).trim())rows+='<dt>'+p[1]+'</dt><dd>'+esc(w[p[0]].trim())+'</dd>';});
+  if(w.status)rows+='<dt>Status</dt><dd>'+WORK[w.status]+'</dd>';
+  [['targets','Work on'],['sources','Read']].forEach(function(p){if(w[p[0]])rows+='<dt>'+p[1]+'</dt><dd>'+names(w[p[0]])+'</dd>';});
+  if(paras(str(w.instructions)).length)rows+='<dt>Instructions</dt><dd>'+paras(w.instructions).map(function(p){return '<p>'+esc(p.trim())+'</p>';}).join('')+'</dd>';
+  [['deliverables','Deliverables'],['done','Done when']].forEach(function(p){if(w[p[0]])rows+='<dt>'+p[1]+'</dt><dd><ul>'+w[p[0]].map(function(x){return '<li>'+esc(x.trim())+'</li>';}).join('')+'</ul></dd>';});
+  if(str(w.review).trim())rows+='<dt>Review</dt><dd>'+esc(w.review.trim())+'</dd>';
+  if(w.base)rows+='<dt>Based on</dt><dd><code>'+w.base.slice(0,12)+'</code></dd>';
+  return rows?'<p class="hxk"><strong>Assignment</strong></p><dl class="hxw">'+rows+'</dl>':'';
+}
+function logLi(e){
+  var bits=['<strong>v'+esc(e.label||String(e.rev||0))+'</strong>'];
+  if(e.at)bits.push(e.at.slice(0,10)+' '+e.at.slice(11,16)+' UTC');
+  var who=str(e.by).trim()+(e.kind?' ('+KINDS[e.kind]+')':'');
+  if(who.trim())bits.push(esc(who.trim()));
+  var li='<li>'+bits.join(' · ')+(str(e.summary).trim()?': '+esc(e.summary.trim()):'');
+  if(e.status)li+=' <span class="hxs">'+WORK[e.status]+'</span>';
+  if(e.blocks)li+='<br><span class="hxm">Changed: '+names(e.blocks)+'</span>';
+  if(str(e.checks).trim())li+='<br><span class="hxm">Checks: '+esc(e.checks.trim())+'</span>';
+  if(str(e.note).trim())li+='<br><span class="hxm">'+esc(e.note.trim())+'</span>';
+  return li+'</li>';
+}
+function hxPanels(){
+  var out='',ai=aiOut(doc);
+  if(ai){
+    var p='';
+    if(str(ai.notes).trim())p+='<div class="rich md">'+mdRender(ai.notes)+'</div>';
+    [['focus','Focus'],['protect','Do not change']].forEach(function(k){if(ai[k[0]])p+='<p class="hxk"><strong>'+k[1]+':</strong> '+names(ai[k[0]])+'</p>';});
+    if(ai.work)p+=workHtml(ai.work);
+    if(p)out+='<details class="hx"><summary>AI Notes</summary>\n'+p+'</details>\n';
+  }
+  if(meta.log.length){
+    var lab=effRev().label;
+    out+='<details class="hx"><summary>Revision Log'+(lab?' <span class="hxv">v'+esc(lab)+'</span>':'')+'</summary>\n<ul class="hxl">'+meta.log.slice().reverse().map(logLi).join('')+'</ul></details>\n';
+  }
+  return out?'<div class="hxbar">\n'+out+'</div>\n':'';
+}
+function blockMap(){var m={};doc.tabs.forEach(function(t){t.blocks.forEach(function(b){m[b.id]=JSON.stringify(b);});});return m;}
+function newSess(){return {bumped:false,major:false,note:'',base:blockMap(),label0:meta.rev.label,prev:null};}
+function changedBlocks(){var out=[];doc.tabs.forEach(function(t){t.blocks.forEach(function(b){if(sess.base[b.id]!==JSON.stringify(b))out.push(b.id);});});return out;}
+/* On save: if the content changed, record a new revision. Saves during one editing session share a revision. */
+function stamp(){
+  var hsh=contentHash(doc,assets),r=meta.rev,now=nowIso(),by=doc.options.footer.author.trim()||'Editor';
+  if(!sess.bumped){
+    if(r.n>=1&&hsh===r.hash)return;
+    sess.prev={n:r.n,label:r.label,hash:r.hash};sess.bumped=true;
+    if(!meta.created)meta.created=now;
+  }
+  var first=sess.prev.n<1,label=first?'1':bumpLabel(sess.prev.label,sess.major);
+  var summary=sess.note.trim()||(first?'Created':'Edited in the editor');
+  var e=prune({rev:first?1:sess.prev.n+1,label:label,at:now,by:by,kind:'human',summary:summary,blocks:first?[]:changedBlocks()});
+  var last=meta.log.length&&meta.log[meta.log.length-1];
+  if(r.hash===hsh&&r.label===label&&last&&last.summary===summary&&r.n===e.rev)return;
+  meta.rev={n:e.rev,label:label,hash:hsh,parent:first?'':sess.prev.hash};meta.modified=now;
+  if(last&&last.rev===e.rev&&r.n===e.rev)meta.log[meta.log.length-1]=e;else meta.log.push(e);
+}
+function vname(n){var b=str(n).replace(/\.(helix|hlx)\.html?$/i,'').replace(/\.html?$/i,'').replace(/_v[0-9]+(\.[0-9]+)*$/,'');return (b||'document')+'_v'+effRev().label+'.helix.html';}
+
 /* ---------- state ---------- */
-function blank(){doc={title:'',subtitle:'',options:{toc:false,accent:'green',footer:noFooter(),logo:'',status:'',fingerprints:false,about:true},tabs:[{id:uid(),title:'',blocks:[]}]};cur=0;insertAt=null;assets=new Map();fileHandle=null;fileName='';dirty=false;resetHistory();}
+function blank(){doc={title:'',subtitle:'',options:{toc:false,accent:'green',footer:noFooter(),logo:'',status:'',fingerprints:false,about:true},tabs:[{id:uid(),title:'',blocks:[]}],ai:emptyAi()};cur=0;insertAt=null;assets=new Map();fileHandle=null;fileName='';dirty=false;meta=newMeta();sess=newSess();resetHistory();}
 function commit(){
   clearTimeout(htimer);htimer=0;
   var j=JSON.stringify(doc);
@@ -897,6 +1054,40 @@ function removeTab(){
   });
   doc.tabs.splice(cur,1);cur=Math.max(0,Math.min(cur,doc.tabs.length-1));insertAt=null;touch();render();
 }
+function toggleId(list,id,on){var i=list.indexOf(id);if(on&&i<0)list.push(id);if(!on&&i>=0)list.splice(i,1);}
+function renderMeta(){
+  var ai=doc.ai,ta=$('ai-notes'),k=knownIds(doc),r=meta.rev;
+  if(document.activeElement!==ta)ta.value=ai.notes;
+  $('ai-sum').textContent=(ai.notes.trim()||idList(ai.focus,k).length||idList(ai.protect,k).length||ai.work)?'· in use':'· optional';
+  var box=$('ai-scope'),rows=[];box.textContent='';
+  doc.tabs.forEach(function(t,ti){t.blocks.forEach(function(b){rows.push({id:b.id,name:(doc.tabs.length>1?tabName(t,ti)+' › ':'')+nameOf(b.id)});});});
+  if(rows.length){
+    var tb=h('tbody');
+    rows.forEach(function(x){
+      function cb(list,label){return h('td',{class:'c'},h('input',{type:'checkbox',checked:list.indexOf(x.id)>=0,'aria-label':label+': '+x.name,
+        onchange:function(e){toggleId(list,x.id,e.target.checked);touch();renderMetaSum();}}));}
+      tb.append(h('tr',null,h('td',{text:x.name}),cb(ai.focus,'Focus'),cb(ai.protect,'Do not change')));
+    });
+    box.append(h('p',{class:'small'},'Focus: the sections an AI should read and work on by default. Do not change: sections an AI must leave exactly as they are.'),
+      h('table',{class:'scope'},h('thead',null,h('tr',null,h('th',{text:'Section'}),h('th',{class:'c',text:'Focus'}),h('th',{class:'c',text:'Do not change'}))),tb));
+  }else box.append(h('p',{class:'small'},'Add blocks to choose which ones an AI should focus on or leave alone.'));
+  var w=$('ai-work');w.textContent='';
+  if(ai.work)w.append(h('p',{class:'small'},'This document also carries an assignment'+(ai.work.task?' ('+ai.work.task+')':'')+' from the app that prepared it. It is kept unchanged and shown in the AI Notes.'));
+  renderMetaSum();
+  var L=$('log-list');L.textContent='';
+  if(meta.log.length){var ul=h('ul',{class:'loglist'});
+    meta.log.slice().reverse().slice(0,30).forEach(function(e){
+      ul.append(h('li',null,h('strong',{text:'v'+(e.label||e.rev)}),' '+[e.at?e.at.slice(0,10)+' '+e.at.slice(11,16)+' UTC':'',str(e.by)+(e.kind?' ('+KINDS[e.kind]+')':'')].filter(Boolean).join(' · ')
+        +(e.summary?': '+e.summary:'')+(e.status?' ['+WORK[e.status]+']':'')));});
+    L.append(ul);
+  }else L.append(h('p',{class:'small'},'No revisions yet. Saving records one automatically.'));
+  if(document.activeElement!==$('rev-note'))$('rev-note').value=sess.note;
+  $('rev-major').checked=sess.major;
+}
+function renderMetaSum(){
+  var r=meta.rev,changed=r.n>=1&&contentHash(doc,assets)!==r.hash;
+  $('log-sum').textContent=r.n<1?'· v1 when first saved':'· v'+r.label+(sess.bumped?' (this session)':changed?' · next save: v'+bumpLabel(r.label,sess.major):'');
+}
 function render(){
   if(htimer)commit();
   if(cur>=doc.tabs.length)cur=doc.tabs.length-1;
@@ -904,7 +1095,7 @@ function render(){
   var box=$('blocks');box.textContent='';
   if(insertAt!=null&&insertAt>=B().length)insertAt=null;
   B().forEach(function(b,i){box.append(inserter(i),blockEl(b,i));});
-  meter();
+  meter();renderMeta();
 }
 function inserter(i){
   var row=h('div',{class:'ins'+(insertAt===i?' open':'')});
@@ -1232,10 +1423,15 @@ function renderTab(t){
   return nav+body;
 }
 function buildDocument(){
-  var meta={};
-  assets.forEach(function(a,id){meta[id]={name:a.name,type:a.type,bytes:a.bytes,sha256:fingerprint(a)};});
-  var source=JSON.stringify(Object.assign({format:'helix',version:1},doc.options.about?{about:ABOUT_JSON}:{},{title:doc.title,subtitle:doc.subtitle,options:doc.options,tabs:doc.tabs,assets:meta}))
-    .replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
+  var am={};
+  assets.forEach(function(a,id){am[id]={name:a.name,type:a.type,bytes:a.bytes,sha256:fingerprint(a)};});
+  var head={format:'helix',version:1,spec:SPEC,id:meta.id,rev:prune(effRev())},ai=aiOut(doc);
+  ['created','modified','source'].forEach(function(k){if(meta[k])head[k]=meta[k];});
+  if(doc.options.about)head.about=ABOUT_JSON;
+  if(ai)head.ai=ai;
+  head.title=doc.title;head.subtitle=doc.subtitle;head.options=doc.options;head.tabs=doc.tabs;head.assets=am;
+  if(meta.log.length)head.log=meta.log;
+  var source=JSON.stringify(head).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
   var title=doc.title.trim()||'Untitled document',body,tabcss='';
   if(doc.tabs.length<2)body=renderTab(doc.tabs[0]);
   else{
@@ -1264,7 +1460,7 @@ function buildDocument(){
   return '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n'
     +'<meta http-equiv="Content-Security-Policy" content="'+DOC_CSP+'">\n<meta name="generator" content="Green Helix Document Editor __VERSION__">\n'
     +'<title>'+esc(title)+'</title>\n<script type="application/json" id="doc-source">'+source+'<\/script>\n<style>'+DOC_CSS+tint+tabcss+'</style>\n</head>\n<body>\n<main>\n'
-    +h1+nav+body+foot+(doc.options.about?aboutHtml(assets.size-(assets.has(doc.options.logo)?1:0)>0):'')
+    +h1+hxPanels()+nav+body+foot+(doc.options.about?aboutHtml(assets.size-(assets.has(doc.options.logo)?1:0)>0):'')
     +'</main>\n</body>\n</html>\n';
 }
 
@@ -1405,6 +1601,7 @@ function loadText(text){
   try{data=JSON.parse(src.textContent);}catch(e){throw new Error('The editing data in this file is damaged.');}
   var tabsIn=data&&(Array.isArray(data.tabs)?data.tabs:(Array.isArray(data.blocks)?[{title:'',blocks:data.blocks}]:null));
   if(!tabsIn)throw new Error('The editing data in this file is not in a format this editor knows.');
+  if(data.format==='helix'&&typeof data.version==='number'&&data.version>1)throw new Error('This file uses Helix format version '+data.version+', which is newer than this editor. It still opens in any web browser for reading; use a newer editor to change it.');
   var op=data.options||{},fo=op.footer||{};
   var bad=[],nd={title:str(data.title),subtitle:str(data.subtitle),options:{toc:!!op.toc,accent:ACCENTS[op.accent]?op.accent:'green',footer:{on:!!fo.on,author:str(fo.author),version:str(fo.version),date:/^\d{4}-\d{2}-\d{2}$/.test(fo.date)?fo.date:''},logo:'',status:STATUS[op.status]?op.status:'',fingerprints:!!op.fingerprints,about:!!op.about},tabs:[]},na=new Map(),info=data.assets||{},missing=0,seenId={};
   function keep(id){
@@ -1450,7 +1647,14 @@ function loadText(text){
   });
   if(!nd.tabs.length)nd.tabs.push({id:keep(''),title:'',blocks:[]});
   if(op.logo){var lgid=take(op.logo);if(lgid)nd.options.logo=lgid;}
-  doc=nd;assets=na;cur=0;insertAt=null;lastBad=bad;return missing;
+  var ai=normAi(data.ai,knownIds(nd))||{};
+  nd.ai={notes:ai.notes||'',focus:ai.focus||[],protect:ai.protect||[],work:ai.work||null};
+  var m=normMeta(data);
+  if(!m.id)m.id=newDocId();
+  if(m.rev.n<1)m.rev.n=1;
+  if(!m.rev.label)m.rev.label=String(m.rev.n);
+  if(!m.rev.hash)m.rev.hash=contentHash(nd,na);
+  doc=nd;assets=na;meta=m;sess=newSess();cur=0;insertAt=null;lastBad=bad;return missing;
 }
 function openFile(file,handle){
   return file.text().then(function(text){
@@ -1478,8 +1682,10 @@ function shareFile(blob,name){
   return Promise.resolve('fail');
 }
 function save(copy){
-  var html=buildDocument(),blob=new Blob([html],{type:'text/html'}),name=(fileName||slug()).replace(/\.hlx\.html?$/i,'.helix.html');
-  var done=function(n,how){if(!copy){dirty=false;fileName=n;}meter();notice(how+' '+n+' ('+fmt(blob.size)+').','good');};
+  stamp();renderMeta();
+  var html=buildDocument(),blob=new Blob([html],{type:'text/html'}),name=vname(fileName||slug());
+  if(fileHandle&&!copy&&meta.rev.label!==sess.label0)fileHandle=null;
+  var done=function(n,how){if(!copy){dirty=false;fileName=n;sess.label0=meta.rev.label;}meter();notice(how+' '+n+' ('+fmt(blob.size)+').','good');};
   if(blob.size>LIMIT&&!confirm('This document is '+fmt(blob.size)+', over the 25 MB limit. Save anyway?'))return Promise.resolve();
   if(!copy&&window.showSaveFilePicker){
     var get=fileHandle?Promise.resolve(fileHandle):window.showSaveFilePicker({suggestedName:name,types:[{description:'Helix document',accept:{'text/html':['.html']}}]});
@@ -1550,7 +1756,7 @@ function startFrom(k){
     if(b.type==='files'){n.items=b.items||[];n.desc=!!b.desc;n.notes=b.notes||{};return n;}
     for(k in b)if(!(k in n))n[k]=b[k];return n;});}
   var tabs=(c.tabs||[{title:'',blocks:c.blocks}]).map(function(x){return {id:uid(),title:x.title||'',blocks:mk(x.blocks)};});
-  doc={title:c.title,subtitle:c.subtitle,options:c.options,tabs:tabs};cur=0;resetHistory();dirty=false;syncChrome();render();if(previewing)setPreview(false);
+  doc={title:c.title,subtitle:c.subtitle,options:c.options,tabs:tabs,ai:emptyAi()};meta=newMeta();sess=newSess();cur=0;resetHistory();dirty=false;syncChrome();render();if(previewing)setPreview(false);
   $('templates').hidden=true;$('btn-new').setAttribute('aria-expanded','false');
   notice(k==='blank'?'Started a blank document.':'Started from the '+(t.label||k)+' template. Replace the placeholder text with your own.','good');
 }
@@ -1615,6 +1821,11 @@ Object.keys(ACCENTS).forEach(function(k){
   var r=h('input',{type:'radio',name:'accent',value:k,onchange:function(){doc.options.accent=k;touch();if(previewing)setPreview(true);}});
   $('swatches').append(h('label',{class:'swatch'},r,h('i',{style:'background:'+ACCENTS[k][1]}),ACCENTS[k][0]));
 });
+$('ai-notes').addEventListener('input',function(e){doc.ai.notes=e.target.value;touch();});
+$('ai-notes').addEventListener('change',function(){renderMeta();});
+$('rev-note').addEventListener('input',function(e){sess.note=e.target.value;});
+$('rev-major').addEventListener('change',function(e){sess.major=e.target.checked;renderMetaSum();});
+$('rev-new').addEventListener('click',function(){var n=meta.rev;sess=newSess();renderMeta();notice('The next save will record a new version (v'+(n.n<1?'1':bumpLabel(n.label,false))+') if anything has changed.','good');});
 $('btn-save').addEventListener('click',function(){save(false);});
 $('btn-copy').addEventListener('click',function(){save(true);});
 window.addEventListener('beforeunload',function(e){if(dirty){e.preventDefault();e.returnValue='';}});

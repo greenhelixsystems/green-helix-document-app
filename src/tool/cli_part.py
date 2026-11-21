@@ -285,7 +285,7 @@ def spec_from_document(doc, assets, paths):
         return entry
 
     def bk(b):
-        o = {"type": b["type"]}
+        o = {"id": b["id"], "type": b["type"]}
         if b["type"] == "heading":
             o["text"] = b["text"]
             return o
@@ -298,10 +298,10 @@ def spec_from_document(doc, assets, paths):
         elif t == "markdown":
             o["md"] = b["md"]
         elif t == "images":
-            o["items"] = [named({"file": paths[i["asset"]], "caption": i["caption"]}, i["asset"]) for i in b["items"]]
+            o["items"] = [named({"id": i["asset"], "file": paths[i["asset"]], "caption": i["caption"]}, i["asset"]) for i in b["items"]]
         elif t == "files":
             o["desc"] = b["desc"]
-            o["items"] = [named({"file": paths[i], "note": b["notes"].get(i, "")}, i) for i in b["items"]]
+            o["items"] = [named({"id": i, "file": paths[i], "note": b["notes"].get(i, "")}, i) for i in b["items"]]
         elif t == "callout":
             o["tone"] = b["tone"]
             o["text"] = b["text"]
@@ -311,9 +311,21 @@ def spec_from_document(doc, assets, paths):
             o["rows"] = b["rows"]
         return o
     op = dict(doc["options"])
+    if op["logo"]:
+        op["logo_id"] = op["logo"]
     op["logo"] = paths.get(op["logo"], "")
-    return {"title": doc["title"], "subtitle": doc["subtitle"], "options": op,
-            "tabs": [{"title": t["title"], "blocks": [bk(b) for b in t["blocks"]]} for t in doc["tabs"]]}
+    m = doc["meta"]
+    out = {"id": m["id"], "rev": prune(m["rev"])}
+    for k in ("created", "modified", "source"):
+        if m.get(k):
+            out[k] = m[k]
+    if doc.get("ai"):
+        out["ai"] = doc["ai"]
+    out.update({"title": doc["title"], "subtitle": doc["subtitle"], "options": op,
+                "tabs": [{"id": t["id"], "title": t["title"], "blocks": [bk(b) for b in t["blocks"]]} for t in doc["tabs"]]})
+    if m["log"]:
+        out["log"] = m["log"]
+    return out
 
 
 def unpack(path, outdir):
@@ -382,18 +394,27 @@ def _shrink(data, mime):
         return data
 
 
-def build_from_spec(spec, base_dir=".", shrink=True, today=None):
-    """Turn a spec into (html, problems)."""
+def build_from_spec(spec, base_dir=".", shrink=True, today=None, now=None):
+    """Turn a spec into (html, problems).
+
+    The revision record follows one rule: a spec without rev.hash is a new document (revision 1, or the rev it names);
+    a spec whose content still matches rev.hash is rebuilt unchanged; otherwise it becomes the next revision."""
+    html, problems, _doc = build_doc_from_spec(spec, base_dir, shrink, today, now)
+    return html, problems
+
+
+def build_doc_from_spec(spec, base_dir=".", shrink=True, today=None, now=None):
     problems = []
     files = {}
     order = []
+    taken = set()
 
-    def reg(path, for_images, name=None):
+    def reg(path, for_images, name=None, want=None):
         if not isinstance(path, str) or not path:
             problems.append("a file reference is empty")
             return None
         full = path if os.path.isabs(path) else os.path.join(base_dir, path)
-        key = (full, for_images, name)
+        key = (full, for_images, name, want)
         if key in files:
             return files[key]
         if not os.path.isfile(full):
@@ -403,7 +424,8 @@ def build_from_spec(spec, base_dir=".", shrink=True, today=None):
         mime = _guess_type(full)
         if for_images and shrink:
             data = _shrink(data, mime)
-        id_ = "spec%d" % len(order)
+        id_ = want if isinstance(want, str) and re.fullmatch(r"a[a-z0-9]{6,24}", want) and want not in taken else "spec%d" % len(order)
+        taken.add(id_)
         files[key] = id_
         order.append((id_, {"name": name or os.path.basename(full), "type": mime, "b64": base64.b64encode(data).decode("ascii"), "bytes": len(data), "hint": name or os.path.basename(full)}))
         return id_
@@ -424,14 +446,14 @@ def build_from_spec(spec, base_dir=".", shrink=True, today=None):
                 items = []
                 for it in b.get("items") or []:
                     it = {"file": it} if isinstance(it, str) else dict(it)
-                    items.append({"asset": reg(it.get("file"), True, it.get("name")), "caption": it.get("caption", "")})
+                    items.append({"asset": reg(it.get("file"), True, it.get("name"), it.get("id")), "caption": it.get("caption", "")})
                 b["items"] = items
             if b.get("type") == "files":
                 items = []
                 notes = {}
                 for it in b.get("items") or []:
                     it = {"file": it} if isinstance(it, str) else dict(it)
-                    id_ = reg(it.get("file"), False, it.get("name"))
+                    id_ = reg(it.get("file"), False, it.get("name"), it.get("id"))
                     if id_:
                         items.append(id_)
                         if it.get("note"):
@@ -441,16 +463,40 @@ def build_from_spec(spec, base_dir=".", shrink=True, today=None):
                 if notes:
                     b.setdefault("desc", True)
     if isinstance(op.get("logo"), str) and op["logo"]:
-        op["logo"] = reg(op["logo"], True)
+        op["logo"] = reg(op["logo"], True, None, op.get("logo_id"))
+    op.pop("logo_id", None)
     by_id = dict(order)
     spec["assets"] = {}
+    if spec.get("format") == "helix" and isinstance(spec.get("version"), (int, float)) and not isinstance(spec.get("version"), bool) and spec["version"] > FORMAT_VERSION:
+        raise ValueError("this spec says format version %s, newer than this tool (version %d)" % (spec["version"], FORMAT_VERSION))
     ids = IdMaker(_s(spec.get("title")))
+    raw_rev = spec.get("rev") if isinstance(spec.get("rev"), dict) else {}
+    had = _match(_HASH, raw_rev.get("hash"))
     doc, assets, missing, _bad = load_data(spec, lambda i: by_id.get(i), ids)
+    m = doc["meta"]
+    fresh = content_hash(doc, assets)
+    stamp = now or now_iso()
+    by = trim(_s(spec.get("by"))) or "helix.py"
+    kind = spec.get("kind") if _has(KINDS, spec.get("kind")) else ("tool" if by == "helix.py" else "")
+    if not had:
+        m["rev"]["hash"] = fresh
+        m["rev"]["parent"] = m["rev"]["parent"] if m["rev"]["n"] > 1 else ""
+        m["created"] = m["created"] or stamp
+        m["modified"] = m["modified"] or m["created"]
+        if not m["log"]:
+            m["log"] = [prune({"rev": m["rev"]["n"], "label": m["rev"]["label"], "at": m["created"], "by": by, "kind": kind,
+                               "summary": _s(spec.get("summary")) or ("Created" if m["rev"]["n"] == 1 else "")})]
+    elif fresh != had:
+        n = m["rev"]["n"] + 1
+        label = bump_label(m["rev"]["label"], bool(spec.get("major")))
+        m["rev"] = {"n": n, "label": label, "hash": fresh, "parent": had}
+        m["modified"] = stamp
+        m["log"].append(prune({"rev": n, "label": label, "at": stamp, "by": by, "kind": kind, "summary": _s(spec.get("summary")) or "Rebuilt from spec"}))
     html = render(doc, assets, today)
     size = len(html.encode("utf-8"))
     if size > LIMIT:
         problems.append("the finished file is %s, over the 25 MB limit" % fmt_size(size))
-    return html, problems
+    return html, problems, doc
 
 
 # ---------------------------------------------------------------------------

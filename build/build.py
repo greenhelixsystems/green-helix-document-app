@@ -109,9 +109,9 @@ def between(a, b):
     return ed[i:ed.index(b, i)]
 
 
-js = ";\n".join([between("var ACCENTS=", "var DUP_ICON="), between("var STATUS=", "var DOC_CSS="), between("var DOC_CSS=", "var DOC_CSP="),
+js = ";\n".join([between("var ACCENTS=", "var DUP_ICON="), between("var LABEL=", "var STATUS="), between("var STATUS=", "var DOC_CSS="), between("var DOC_CSS=", "var DOC_CSP="),
                  between("var DOC_CSP=", "\n\nvar mdTarget"), between("var ABOUT_AI=[", "function aboutHtml")]).replace(";;", ";")
-js += "\nprocess.stdout.write(JSON.stringify({ACCENTS:ACCENTS,STATUS:STATUS,TONES:TONES,DOC_CSS:DOC_CSS,DOC_CSP:DOC_CSP,ABOUT_AI:ABOUT_AI,ABOUT_JSON:ABOUT_JSON}));"
+js += "\nprocess.stdout.write(JSON.stringify({ACCENTS:ACCENTS,STATUS:STATUS,TONES:TONES,LABEL:LABEL,SPEC:SPEC,WORK:WORK,KINDS:KINDS,DOC_CSS:DOC_CSS,DOC_CSP:DOC_CSP,ABOUT_AI:ABOUT_AI,ABOUT_JSON:ABOUT_JSON}));"
 with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as fh:
     fh.write(js)
 r = subprocess.run(["node", fh.name], capture_output=True, text=True)
@@ -120,7 +120,7 @@ if r.returncode:
     sys.exit("node failed: " + r.stderr)
 C = json.loads(r.stdout)
 gen = re.search(r'content="(Green Helix Document Editor [0-9.]+)"', ed).group(1)
-ver = int(re.search(r"\{format:'helix',version:(\d+)\}", ed).group(1))
+ver = int(re.search(r"\{format:'helix',version:(\d+),spec:SPEC", ed).group(1))
 lit = lambda x: json.dumps(x, ensure_ascii=True)
 tool_head = '''#!/usr/bin/env python3
 """helix.py - build, unpack and check Helix documents.
@@ -145,11 +145,15 @@ DOC_CSP = %s
 ACCENTS = %s
 STATUS = %s
 TONES = %s
+SPEC = %s
+LABEL = %s
+WORK = %s
+KINDS = %s
 ABOUT_AI = %s
 ABOUT_JSON = %s
 DOC_CSS = %s
 
-''' % (ver, ver, lit(gen), lit(C["DOC_CSP"]), lit(C["ACCENTS"]), lit(C["STATUS"]), lit(C["TONES"]), lit(C["ABOUT_AI"]), lit(C["ABOUT_JSON"]), lit(C["DOC_CSS"]))
+''' % (ver, ver, lit(gen), lit(C["DOC_CSP"]), lit(C["ACCENTS"]), lit(C["STATUS"]), lit(C["TONES"]), lit(C["SPEC"]), lit(C["LABEL"]), lit(C["WORK"]), lit(C["KINDS"]), lit(C["ABOUT_AI"]), lit(C["ABOUT_JSON"]), lit(C["DOC_CSS"]))
 parts = [rd(P("src", "tool", "%s_part.py" % n)) for n in ("md", "html", "core", "cli")]
 tool = (tool_head + "\n\n".join(parts)).replace("\n\n\n\n", "\n\n\n")
 assert all(ord(c) < 128 for c in tool)
