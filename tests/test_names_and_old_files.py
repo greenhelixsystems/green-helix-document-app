@@ -38,10 +38,6 @@ with sync_playwright() as p:
         check("%s (.hlx.html, format hlx) opens and re-saves as format helix" % v, data_of(h)["format"] == "helix" and data_of(h)["version"] == 1, nm)
         check("%s: the saved name is .helix.html, not .hlx.helix.html" % v, nm.endswith(".helix.html") and ".hlx" not in nm, nm)
         check("%s: the upgraded file passes the Python check" % v, helix.check_document(h)[0] == [], helix.check_document(h))
-        if v == "v6":
-            page.click("#btn-options")
-            with page.expect_download() as d: page.click("#btn-ai")
-            check("export names drop the old extension too", ".hlx" not in d.value.suggested_filename and d.value.suggested_filename.endswith("-for-ai.zip"), d.value.suggested_filename)
     check("no console errors", not errs, errs)
     b.close()
 

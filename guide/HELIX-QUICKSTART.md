@@ -1,6 +1,6 @@
 # Helix quickstart for AI assistants
 
-*Paste this into an assistant's standing instructions. Helix 1.1.*
+*Paste this into an assistant's standing instructions. Helix 1.2.*
 
 When you receive a `.helix.html` file:
 

@@ -68,7 +68,7 @@ def _render_block(b, doc, assets):
                         all_ = False
             num.append(any_ and all_)
         head = "<tr>" + "".join("<th" + (' class="num"' if num[i] else "") + ' scope="col">' + esc(x) + "</th>" for i, x in enumerate(rows[0])) + "</tr>"
-        body = "".join("<tr>" + "".join("<td" + (' class="num"' if num[i] else "") + ">" + esc(x) + "</td>" for i, x in enumerate(row)) + "</tr>"
+        body = "".join("<tr>" + "".join("<td" + (' class="num"' if num[i] else "") + ">" + chip_html(x) + "</td>" for i, x in enumerate(row)) + "</tr>"
                        for row in rows[1:] if any(trim(x) for x in row))
         if not body:
             return ""
@@ -87,6 +87,33 @@ def _render_block(b, doc, assets):
     if t == "checklist":
         li = "".join("<li" + (' class="done"><span class="vh">Done: </span>' if it["done"] else ">") + esc(trim(it["text"])) + "</li>" for it in b["items"] if trim(it["text"]))
         return _section(b, '<ul class="checks">' + li + "</ul>") if (li or trim(b["title"])) else ""
+    if t == "stats":
+        d = "".join('<div class="stat"><b>' + esc(trim(it["value"])) + "</b>" + ("<span>" + esc(trim(it["label"])) + "</span>" if trim(it["label"]) else "")
+                    + ("<small>" + esc(trim(it["note"])) + "</small>" if trim(it["note"]) else "") + "</div>" for it in b["items"] if trim(it["value"]) or trim(it["label"]))
+        return _section(b, '<div class="stats">' + d + "</div>" if d else "") if (d or trim(b["title"])) else ""
+    if t == "cards":
+        li = []
+        for it in b["items"]:
+            if not (trim(it["title"]) or trim(it["body"]) or it["tags"]):
+                continue
+            li.append("<li>" + ('<span class="cn" aria-hidden="true">' + str(len(li) + 1) + "</span>" if b["numbered"] else "") + "<div>"
+                      + ("<h3>" + esc(trim(it["title"])) + "</h3>" if trim(it["title"]) else "")
+                      + ('<div class="rich md">' + md_render(it["body"]) + "</div>" if trim(it["body"]) else "") + "</div>"
+                      + ('<p class="ctags">' + "".join('<span class="chip t-' + g["tone"] + '">' + esc(trim(g["text"])) + "</span>" for g in it["tags"]) + "</p>" if it["tags"] else "")
+                      + "</li>")
+        li = "".join(li)
+        return _section(b, '<ol class="cards' + ("" if b["numbered"] else " plain") + '">' + li + "</ol>" if li else "") if (li or trim(b["title"])) else ""
+    if t == "sources":
+        out = ""
+        for g, items in _source_groups(b):
+            out += ("<h3 class=\"srcg\">" + esc(g) + "</h3>" if g else "") + '<ul class="srcs">'
+            for it in items:
+                hr = safe_href(it["url"])
+                tx = esc(trim(it["title"]) or trim(it["url"]))
+                out += ("<li>" + ('<a href="' + esc(hr) + '">' + tx + "</a>" if hr else tx) + (' <span class="acc">accessed ' + it["accessed"] + "</span>" if it["accessed"] else "")
+                        + (' <span class="acc">\u00b7 ' + esc(trim(it["note"])) + "</span>" if trim(it["note"]) else "") + "</li>")
+            out += "</ul>"
+        return _section(b, '<div class="sources">' + out + "</div>" if out else "") if (out or trim(b["title"])) else ""
     if t == "files":
         rows = []
         for id_ in b["items"]:
@@ -192,6 +219,24 @@ def hx_panels(doc, assets):
     return '<div class="hxbar">\n' + out + "</div>\n" if out else ""
 
 
+def chip_html(x):
+    m = re.fullmatch(r"\[\[([^\]|]+?)(?:\|(neutral|good|caution|bad))?\]\]", trim(x))
+    return '<span class="chip t-' + (m.group(2) or "neutral") + '">' + esc(trim(m.group(1))) + "</span>" if m and trim(m.group(1)) else esc(x)
+
+
+def _source_groups(b):
+    groups, by = [], {}
+    for it in b["items"]:
+        if not (trim(it["title"]) or trim(it["url"])):
+            continue
+        g = trim(it["group"])
+        if g not in by:
+            by[g] = []
+            groups.append(g)
+        by[g].append(it)
+    return [(g, by[g]) for g in groups]
+
+
 def _render_tab(t, doc, assets):
     parts = []
     toc = []
@@ -219,7 +264,11 @@ def _render_tab(t, doc, assets):
     if doc["options"]["toc"] and len(toc) > 1:
         nav = ('<nav class="toc" aria-label="Contents"><section><h2>Contents</h2><ul>'
                + "".join("<li" + (' class="sub"' if sub else "") + '><a href="#s-' + id_ + '">' + esc(tx) + "</a></li>" for id_, tx, sub in toc) + "</ul></section></nav>\n")
-    return nav + body
+    top = [(id_, tx) for id_, tx, sub in toc if not sub]
+    bar = ""
+    if doc["options"].get("nav") is True and len(top) > 1:
+        bar = '<nav class="secbar" aria-label="Sections">' + "".join('<a href="#s-' + id_ + '">' + esc(tx) + "</a>" for id_, tx in top) + "</nav>\n"
+    return bar + nav + body
 
 
 def about_html(has_files):
@@ -321,7 +370,12 @@ def render(doc, assets, today=None):
         foot = '<footer class="meta">' + ' <span aria-hidden="true">\u00b7</span> '.join(bits) + "</footer>\n"
     lg = assets.get(doc["options"]["logo"])
     st = doc["options"]["status"] if doc["options"]["status"] in STATUS else ""
-    h1 = "<h1>" + esc(title) + "</h1>\n" + ('<p class="sub">' + esc(trim(doc["subtitle"])) + "</p>\n" if trim(doc["subtitle"]) else "")
+    op = doc["options"]
+    eb = trim(op.get("eyebrow", ""))
+    facts = op.get("facts", [])
+    h1 = (('<p class="eyebrow">' + esc(eb) + "</p>\n" if eb else "") + "<h1" + (' class="lg"' if op.get("titleSize") == "large" else "") + ">" + esc(title) + "</h1>\n"
+          + ('<p class="sub">' + esc(trim(doc["subtitle"])) + "</p>\n" if trim(doc["subtitle"]) else "")
+          + ('<ul class="facts">' + "".join("<li>" + esc(trim(x)) + "</li>" for x in facts) + "</ul>\n" if facts else ""))
     if lg or st:
         h1 = ('<header class="head">\n' + ('<img class="logo" id="asset-' + doc["options"]["logo"] + '" alt="Logo" src="data:' + lg["type"] + ";base64," + lg["b64"] + '">\n' if lg else "")
               + '<div class="ht">\n' + ('<p class="status st-' + st + '">' + STATUS[st] + "</p>\n" if st else "") + h1 + "</div>\n</header>\n")
@@ -333,7 +387,8 @@ def render(doc, assets, today=None):
     n_files = len(assets) - (1 if doc["options"]["logo"] in assets else 0)
     return ('<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n'
             + '<meta http-equiv="Content-Security-Policy" content="' + DOC_CSP + '">\n<meta name="generator" content="' + GENERATOR + '">\n'
-            + "<title>" + esc(title) + '</title>\n<script type="application/json" id="doc-source">' + source + "</script>\n<style>" + DOC_CSS + tint + tabcss + "</style>\n</head>\n<body>\n<main>\n"
+            + "<title>" + esc(title) + "</title>\n" + ('<link rel="icon" href="data:' + lg["type"] + ";base64," + lg["b64"] + '">\n' if lg and lg["bytes"] <= ICON_MAX else "")
+            + '<script type="application/json" id="doc-source">' + source + "</script>\n<style>" + DOC_CSS + tint + tabcss + "</style>\n</head>\n<body>\n<main>\n"
             + h1 + hx_panels(doc, assets) + body + foot + (about_html(n_files > 0) if doc["options"]["about"] else "") + "</main>\n</body>\n</html>\n")
 
 
@@ -341,7 +396,7 @@ def render(doc, assets, today=None):
 # Loading: a port of the editor's loader. It accepts the JSON stored in a document
 # (and the older layouts) and returns a clean document plus its attachments.
 # ---------------------------------------------------------------------------
-_BLOCK_TYPES = ("heading", "text", "markdown", "images", "table", "collapsible", "checklist", "callout", "files")
+_BLOCK_TYPES = ("heading", "text", "markdown", "images", "table", "collapsible", "checklist", "callout", "files", "stats", "cards", "sources")
 
 
 def _s(x):
@@ -505,6 +560,15 @@ def load_data(data, find, ids=None):
                                  "date": fo.get("date") if isinstance(fo.get("date"), str) and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", fo.get("date")) else ""},
                       "logo": "", "status": op.get("status") if _has(STATUS, op.get("status")) else "", "fingerprints": _b(op.get("fingerprints")), "about": _b(op.get("about"))},
           "tabs": []}
+    # Settings added in 1.2 are kept only when used, so older files keep their exact form and hash.
+    if trim(_s(op.get("eyebrow"))):
+        nd["options"]["eyebrow"] = _s(op.get("eyebrow"))
+    if _strs(op.get("facts")):
+        nd["options"]["facts"] = _strs(op.get("facts"))
+    if op.get("titleSize") == "large":
+        nd["options"]["titleSize"] = "large"
+    if op.get("nav") is True:
+        nd["options"]["nav"] = True
     assets = {}
     state = {"missing": 0, "bad": [], "seen": set()}
 
@@ -589,6 +653,33 @@ def load_data(data, find, ids=None):
                 if t == "callout":
                     b["tone"] = s.get("tone") if _has(TONES, s.get("tone")) else "note"
                     b["text"] = _s(s.get("text"))
+                if t == "stats":
+                    its = s.get("items") if isinstance(s.get("items"), list) else []
+                    b["items"] = [{"value": _s(i.get("value") if isinstance(i, dict) else None), "label": _s(i.get("label") if isinstance(i, dict) else None),
+                                   "note": _s(i.get("note") if isinstance(i, dict) else None)} for i in its] or [{"value": "", "label": "", "note": ""}]
+                if t == "cards":
+                    its = s.get("items") if isinstance(s.get("items"), list) else []
+                    b["numbered"] = s.get("numbered") is not False
+                    b["items"] = []
+                    for i in its:
+                        i = i if isinstance(i, dict) else {}
+                        tg = i.get("tags") if isinstance(i.get("tags"), list) else []
+                        b["items"].append({"title": _s(i.get("title")), "body": _s(i.get("body")).replace("\r\n", "\n").replace("\r", "\n"),
+                                           "tags": [{"text": _s(g.get("text")), "tone": g.get("tone") if _has(CHIP, g.get("tone")) else "neutral"}
+                                                    for g in tg if isinstance(g, dict) and trim(_s(g.get("text")))]})
+                    if not b["items"]:
+                        b["items"] = [{"title": "", "body": "", "tags": []}]
+                if t == "sources":
+                    its = s.get("items") if isinstance(s.get("items"), list) else []
+                    b["items"] = []
+                    for i in its:
+                        i = i if isinstance(i, dict) else {}
+                        ac = i.get("accessed")
+                        b["items"].append({"title": _s(i.get("title")), "url": _s(i.get("url")),
+                                           "accessed": ac if isinstance(ac, str) and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", ac) else "",
+                                           "group": _s(i.get("group")), "note": _s(i.get("note"))})
+                    if not b["items"]:
+                        b["items"] = [{"title": "", "url": "", "accessed": "", "group": "", "note": ""}]
                 if t == "collapsible":
                     its = s.get("items") if isinstance(s.get("items"), list) else []
                     b["items"] = [{"summary": _s(i.get("summary") if isinstance(i, dict) else None), "body": _s(i.get("body") if isinstance(i, dict) else None)} for i in its]

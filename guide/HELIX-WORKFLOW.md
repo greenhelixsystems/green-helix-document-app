@@ -1,6 +1,6 @@
 # Helix workflow for AI assistants
 
-*A short, customisable template (Helix 1.1). Copy it into your AI assistant's standing instructions or project files, then edit the parts marked **Customise**. The full specification is `HELIX-guide.md`; you rarely need it.*
+*A short, customisable template (Helix 1.2). Copy it into your AI assistant's standing instructions or project files, then edit the parts marked **Customise**. The full specification is `HELIX-guide.md`; you rarely need it.*
 
 ## The rule
 

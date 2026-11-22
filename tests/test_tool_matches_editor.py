@@ -1,5 +1,5 @@
 """helix.py against the editor: the Python tool must produce, read and unpack documents exactly as the editor does."""
-import base64, hashlib, importlib.util, io, json, os, random, re, subprocess, sys, zipfile
+import urllib.parse, base64, hashlib, importlib.util, io, json, os, random, re, subprocess, sys, zipfile
 from playwright.sync_api import sync_playwright
 from common import *
 
@@ -182,18 +182,13 @@ with sync_playwright() as p:
     html, pr = hlx.build_from_spec(spec, T + "/in", shrink=False); assert not pr, pr
     open(T + "/export.helix.html", "w", encoding="utf-8").write(html)
     page.evaluate("t=>window.__pde.load(t)", html)
-    page.click("#btn-options")
-    with page.expect_download() as d: page.click("#btn-ai")
-    zp = T + "/export-ai.zip"; d.value.save_as(zp); z = zipfile.ZipFile(zp)
     res = hlx.unpack(T + "/export.helix.html", T + "/unpacked") if os.path.isdir(T + "/unpacked") is False or True else None
-    py_md = open(T + "/unpacked/content.md", encoding="utf-8").read(); ed_md = z.read("content.md").decode("utf-8")
-    check("unpack: content.md identical to the editor's Export for AI", py_md == ed_md)
+    py_md = open(T + "/unpacked/content.md", encoding="utf-8").read(); ed_md = page.evaluate("window.__pde.toMd()")
+    check("unpack: content.md identical to the editor's Markdown export", py_md == ed_md)
     if py_md != ed_md:
         i = next((i for i in range(min(len(py_md), len(ed_md))) if py_md[i] != ed_md[i]), -1); print("   PY", repr(py_md[max(0, i - 80):i + 120]), "\n   ED", repr(ed_md[max(0, i - 80):i + 120]))
-    names = sorted(n for n in z.namelist() if n not in ("content.md", "SHA256SUMS.txt")); pnames = sorted(os.path.relpath(os.path.join(r_, f), T + "/unpacked").replace(os.sep, "/") for r_, _, fs in os.walk(T + "/unpacked") for f in fs if f not in ("content.md", "SHA256SUMS.txt", "spec.json"))
-    check("unpack: same file names and bytes as the editor's export", names == pnames and all(z.read(n) == open(T + "/unpacked/" + n, "rb").read() for n in names), (names, pnames))
-    check("unpack: SHA256SUMS.txt identical", z.read("SHA256SUMS.txt").decode() == open(T + "/unpacked/SHA256SUMS.txt", encoding="utf-8").read())
-    page.click("#btn-options")
+    pnames = sorted(os.path.relpath(os.path.join(r_, f), T + "/unpacked").replace(os.sep, "/") for r_, _, fs in os.walk(T + "/unpacked") for f in fs if f not in ("content.md", "SHA256SUMS.txt", "spec.json"))
+    check("unpack: every file the Markdown links to is written", all(urllib.parse.unquote(l) in pnames for l in re.findall(r"\]\(((?:files|images)/[^)]+)\)", py_md)), pnames)
 
     # 6. unpack -> build -> unpack: nothing lost
     html2, pr = hlx.build_from_spec(json.load(open(T + "/unpacked/spec.json", encoding="utf-8")), T + "/unpacked", shrink=False)

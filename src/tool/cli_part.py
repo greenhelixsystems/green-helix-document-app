@@ -166,6 +166,30 @@ def _ex_paras(t):
 
 def _ex_body(b, assets, paths):
     t = b["type"]
+    if t == "stats":
+        return "\n".join("- " + " ".join(x for x in ["**" + _ex_plain(trim(it["value"])) + "**" if trim(it["value"]) else "", _ex_plain(trim(it["label"])),
+                                                    "(" + _ex_plain(trim(it["note"])) + ")" if trim(it["note"]) else ""] if x)
+                         for it in b["items"] if trim(it["value"]) or trim(it["label"]))
+    if t == "cards":
+        out = []
+        for it in b["items"]:
+            if not (trim(it["title"]) or trim(it["body"]) or it["tags"]):
+                continue
+            head = trim((str(len(out) + 1) + ". " if b["numbered"] else "") + trim(it["title"]))
+            out.append(("**" + _ex_plain(head) + "**" if head else "") + (("" if not head else " ") + "*" + " \u00b7 ".join(_ex_plain(trim(g["text"])) for g in it["tags"]) + "*" if it["tags"] else "")
+                       + ("\n\n" + trim(it["body"]) if trim(it["body"]) else ""))
+        return "\n\n".join(out)
+    if t == "sources":
+        parts = []
+        for g, items in _source_groups(b):
+            lines = []
+            for it in items:
+                hr = safe_href(it["url"])
+                tx = _ex_plain(trim(it["title"]) or trim(it["url"]))
+                lines.append("- " + ("[" + tx + "](" + hr.replace(" ", "%20").replace("(", "%28").replace(")", "%29") + ")" if hr else tx)
+                             + (" (accessed " + it["accessed"] + ")" if it["accessed"] else "") + (" - " + _ex_plain(trim(it["note"])) if trim(it["note"]) else ""))
+            parts.append(("**" + _ex_plain(g) + "**\n\n" if g else "") + "\n".join(lines))
+        return "\n\n".join(parts)
     if t == "text":
         return _ex_html(sanitize(b["html"]))
     if t == "markdown":
@@ -305,7 +329,10 @@ def spec_from_document(doc, assets, paths):
         elif t == "callout":
             o["tone"] = b["tone"]
             o["text"] = b["text"]
-        elif t in ("collapsible", "checklist"):
+        elif t in ("collapsible", "checklist", "stats", "sources"):
+            o["items"] = b["items"]
+        elif t == "cards":
+            o["numbered"] = b["numbered"]
             o["items"] = b["items"]
         elif t == "table":
             o["rows"] = b["rows"]

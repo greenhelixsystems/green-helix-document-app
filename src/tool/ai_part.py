@@ -70,6 +70,12 @@ def block_text(b, assets):
         return "\n".join((assets[it["asset"]]["name"] if it["asset"] in assets else "") + (": " + it["caption"] if it["caption"] else "") for it in b["items"])
     if t == "files":
         return "\n".join((assets[i]["name"] if i in assets else "") + (": " + b["notes"][i] if i in b["notes"] else "") for i in b["items"])
+    if t == "stats":
+        return "\n".join(" ".join(x for x in (it["value"], it["label"], it["note"]) if trim(x)) for it in b["items"])
+    if t == "cards":
+        return "\n".join(it["title"] + (" [" + ", ".join(g["text"] for g in it["tags"]) + "]" if it["tags"] else "") + ("\n" + it["body"] if trim(it["body"]) else "") for it in b["items"])
+    if t == "sources":
+        return "\n".join(" ".join(x for x in (it["group"], it["title"], it["url"], it["accessed"], it["note"]) if trim(x)) for it in b["items"])
     return ""
 
 

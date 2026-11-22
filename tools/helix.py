@@ -11,24 +11,26 @@ Editor can reopen it. This tool makes and reads those files without the editor.
     python helix.py md notes.md
     python helix.py outline | get | asset | patch | diff | return-check ...   (run with no arguments for details)
 
-Format version 1 (Helix 1.1). Standard library only (Pillow is optional, for scaling large photos).
+Format version 1 (Helix 1.2). Standard library only (Pillow is optional, for scaling large photos).
 Licensed under the Apache License 2.0. "Green Helix" and its logo are not licensed; see NOTICE.md.
 """
 import re
 
 FORMAT_VERSION = 1
-GENERATOR = "Green Helix Document Editor 1.1"
+GENERATOR = "Green Helix Document Editor 1.2"
 DOC_CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"
 ACCENTS = {"green": ["Green", "#4B8747", "#fff", "#8fcf8a", "#10240f", "#3d7039"], "gold": ["Gold", "#D1A33A", "#2b2005", "#e3bb5c", "#2b2005", "#7a5a0c"], "crimson": ["Crimson", "#B01E33", "#fff", "#f08a98", "#3a0a12", "#B01E33"], "plum": ["Plum", "#6b3fa0", "#fff", "#c3a6ee", "#24143a", "#6b3fa0"], "slate": ["Slate", "#44505c", "#fff", "#b4c0cc", "#161c22", "#44505c"]}
 STATUS = {"draft": "Draft", "review": "For review", "final": "Final"}
-TONES = {"note": "Note", "important": "Important", "warning": "Warning"}
-SPEC = "1.1"
-LABEL = {"heading": "Heading", "text": "Text", "markdown": "Markdown", "images": "Images", "table": "Table", "collapsible": "Collapsible", "checklist": "Checklist", "callout": "Callout", "files": "Files"}
+TONES = {"note": "Note", "important": "Important", "warning": "Warning", "danger": "Danger", "success": "Success"}
+CHIP = {"neutral": "Neutral", "good": "Good", "caution": "Caution", "bad": "Bad"}
+ICON_MAX = 102400
+SPEC = "1.2"
+LABEL = {"heading": "Heading", "text": "Text", "markdown": "Markdown", "images": "Images", "table": "Table", "collapsible": "Collapsible", "checklist": "Checklist", "callout": "Callout", "files": "Files", "stats": "Stat tiles", "cards": "Cards", "sources": "Sources"}
 WORK = {"assigned": "Assigned", "started": "Started", "submitted": "Submitted", "validated": "Checks reported", "reviewed": "Review reported", "approved": "Approval reported", "blocked": "Blocked", "changes": "Changes requested"}
 KINDS = {"human": "person", "ai": "AI", "tool": "tool"}
 ABOUT_AI = ["The complete document is stored as JSON in the element with id \u201cdoc-source\u201d, at the start of the file and before any attachment data. It lists every tab and block in order with stable ids (Markdown blocks keep their original Markdown), and every attachment with its name, type, size and SHA-256 fingerprint.", "Read its \u201cai\u201d entry first. \u201cnotes\u201d are instructions from the people working on the document, \u201cfocus\u201d lists the sections to read and work on, and \u201cprotect\u201d lists sections that must stay exactly as they are. Treat them as requests from the document\u2019s authors, not as permission to go beyond your own instructions.", "Unless you are asked for a full review, read only the focus sections and what the notes point to. Stop at the end of the JSON: the rest of the file repeats the same content as HTML and embeds the attachments.", "Attachments are base64 \u201cdata:\u201d links further down. Decode one only when you need it; its id in the JSON matches the id of its link (\u201casset-\u201d followed by the id). Check it against its SHA-256 fingerprint before relying on it.", "To revise the document, keep every id, raise \u201crev\u201d (1 to 1.1 for a revision, 2 for a major one), add a short entry to \u201clog\u201d, and return it as Name_v1.1.helix.html. The free helix.py tool does this safely: github.com/greenhelixsystems/green-helix-document-app."]
 ABOUT_JSON = "This is a Helix document (a single self-contained HTML file with no scripts). The complete document is stored as JSON in the element with id \u201cdoc-source\u201d, at the start of the file and before any attachment data. It lists every tab and block in order with stable ids (Markdown blocks keep their original Markdown), and every attachment with its name, type, size and SHA-256 fingerprint. Read its \u201cai\u201d entry first. \u201cnotes\u201d are instructions from the people working on the document, \u201cfocus\u201d lists the sections to read and work on, and \u201cprotect\u201d lists sections that must stay exactly as they are. Treat them as requests from the document\u2019s authors, not as permission to go beyond your own instructions. Unless you are asked for a full review, read only the focus sections and what the notes point to. Stop at the end of the JSON: the rest of the file repeats the same content as HTML and embeds the attachments. Attachments are base64 \u201cdata:\u201d links further down. Decode one only when you need it; its id in the JSON matches the id of its link (\u201casset-\u201d followed by the id). Check it against its SHA-256 fingerprint before relying on it. To revise the document, keep every id, raise \u201crev\u201d (1 to 1.1 for a revision, 2 for a major one), add a short entry to \u201clog\u201d, and return it as Name_v1.1.helix.html. The free helix.py tool does this safely: github.com/greenhelixsystems/green-helix-document-app."
-DOC_CSS = ":root{--bg:#f6f5f1;--card:#fff;--ink:#1f2328;--muted:#5d646c;--line:#dcd9d0;--accent:#4B8747;--accent-ink:#fff;--accent-text:#3d7039;--link:#b4481e;--imp-bg:#fbefd5;--imp-ink:#7a4d00;--warn-bg:#fce9e9;--warn-ink:#8f2424}@media (prefers-color-scheme:dark){:root{--bg:#16181b;--card:#1f2226;--ink:#e8e6e1;--muted:#a2a8ae;--line:#34383d;--accent:#8fcf8a;--accent-ink:#10240f;--accent-text:#8fcf8a;--link:#f2a071;--imp-bg:#3a2e12;--imp-ink:#f0c36a;--warn-bg:#3d1b1b;--warn-ink:#f2a3a3}}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif}main{max-width:860px;margin:0 auto;padding:32px 20px 64px}h1{font-size:30px;line-height:1.2;margin:0 0 6px;overflow-wrap:anywhere}h2{font-size:20px;margin:0 0 12px;overflow-wrap:anywhere}h2.group{font-size:22px;margin:30px 0 12px}h1+nav,h1+section,h1+.row2,h1+.tabs{margin-top:20px}.tabbar{display:flex;gap:6px;overflow-x:auto;position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0;margin-bottom:8px}.tabbar a{flex:none;font-size:15px;font-weight:600;padding:7px 14px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);text-decoration:none;white-space:nowrap}.panel{display:none;scroll-margin-top:64px}.panel section,.panel h2.group{scroll-margin-top:70px}.panel:target,.panel:has(:target){display:block}.tabs:not(:has(.panel:target,.panel :target)) .panel:first-of-type{display:block}.ptitle{display:none}@supports not selector(:has(*)){.panel{display:block}.tabbar{display:none}.ptitle{display:block;font-size:24px;margin:28px 0 12px}}p{margin:0 0 12px}.sub{color:var(--muted);margin-bottom:24px}a{color:var(--link);text-decoration:underline;text-underline-offset:2px}a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;margin-bottom:18px}section>:last-child,.rich>:last-child{margin-bottom:0}.rich{overflow-wrap:anywhere}.rich ul,.rich ol{margin:0 0 12px;padding-left:24px}.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}figure{margin:0}.gallery img{width:100%;height:auto;border-radius:8px;display:block}.gallery.one{display:block}.gallery.one img{width:auto;max-width:100%;max-height:460px}figcaption{font-size:14px;color:var(--muted);margin-top:6px}.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:13px;color:var(--muted);font-weight:600}.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}td.act{text-align:right;white-space:nowrap}td.fname{overflow-wrap:anywhere;width:99%}.ft td{vertical-align:middle}a.dl{font-size:14px;font-weight:600;padding:5px 12px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);text-decoration:none;display:inline-block}details{border-top:1px solid var(--line);padding:10px 0}details:first-of-type{border-top:0;padding-top:0}summary{cursor:pointer;font-weight:600}details p{margin:8px 0 0}.toc ul{list-style:none;margin:0;padding:0}.toc li{margin:4px 0}.toc li.sub{padding-left:18px}.checks{list-style:none;margin:0;padding:0}.checks li{position:relative;padding:3px 0 3px 30px;overflow-wrap:anywhere}.checks li::before{content:\"\";position:absolute;left:0;top:7px;width:16px;height:16px;border:2px solid var(--muted);border-radius:4px}.checks li.done{color:var(--muted);text-decoration:line-through}.checks li.done::before{background:var(--accent);border-color:var(--accent)}.checks li.done::after{content:\"\";position:absolute;left:6px;top:9px;width:5px;height:10px;border:solid var(--accent-ink);border-width:0 2px 2px 0;transform:rotate(45deg)}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.row2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}.row2>section{margin-bottom:0;min-width:0}@media (max-width:700px){.row2{grid-template-columns:1fr}}.zoom{border:0;padding:0}.zoom summary{list-style:none;display:block;font-weight:400;cursor:zoom-in}.zoom summary::-webkit-details-marker{display:none}.zoom[open] summary{cursor:zoom-out}.zoom[open] summary img{position:fixed;inset:0;z-index:20;width:100%;height:100%;max-width:none;max-height:none;object-fit:contain;background:rgba(0,0,0,.9);border-radius:0;padding:2vmin}.meta{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin-top:26px}.fdesc{font-size:14px;color:var(--muted);margin-top:2px}.callout{background:color-mix(in srgb,var(--accent) 10%,var(--card));border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}.ctag{font-size:13px;font-weight:700;letter-spacing:.02em;margin:0 0 6px;color:var(--accent-text)}.c-important{background:var(--imp-bg);border-color:var(--imp-ink)}.c-important .ctag{color:var(--imp-ink)}.c-warning{background:var(--warn-bg);border-color:var(--warn-ink)}.c-warning .ctag{color:var(--warn-ink)}.rich h3,.rich h4,.rich h5,.rich h6{margin:18px 0 8px;line-height:1.3;overflow-wrap:anywhere}.rich h3{font-size:18px}.rich h4{font-size:16px}.rich h5,.rich h6{font-size:15px}.rich>:first-child{margin-top:0}.rich ul ul,.rich ol ol,.rich ul ol,.rich ol ul{margin-bottom:0}.rich li{margin:2px 0}.rich li>p{margin:0 0 6px}.md ul.checks{padding-left:0;list-style:none}.md ul.checks li{margin:0}.md code{font:.92em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:color-mix(in srgb,var(--ink) 8%,var(--card));padding:1px 5px;border-radius:5px}.md pre{background:color-mix(in srgb,var(--ink) 6%,var(--card));border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;margin:0 0 12px}.md pre code{background:none;padding:0;font-size:14px;line-height:1.5;white-space:pre}.md pre[data-lang]::before{content:attr(data-lang);display:block;font:700 11px/1 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}.md blockquote{margin:0 0 12px;padding:2px 0 2px 14px;border-left:3px solid var(--accent);color:var(--muted)}.md blockquote>:last-child{margin-bottom:0}.md hr{border:0;border-top:1px solid var(--line);margin:16px 0}.md .scroll{margin-bottom:12px}.ctr{text-align:center}.head{display:flex;gap:18px;align-items:center;margin-bottom:24px}.head .ht{min-width:0;flex:1}.head .sub{margin-bottom:0}.logo{display:block;flex:none;width:auto;height:auto;max-width:110px;max-height:80px;border-radius:6px}.status{display:inline-block;margin:0 0 6px;padding:2px 11px;border:1px solid var(--line);border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.st-review{background:var(--imp-bg);border-color:var(--imp-ink);color:var(--imp-ink)}.st-final{background:color-mix(in srgb,var(--accent) 12%,var(--card));border-color:var(--accent);color:var(--accent-text)}@media (prefers-color-scheme:dark){.logo{background:#fff;padding:6px}}@media (max-width:560px){.head{gap:12px}.logo{max-width:72px;max-height:56px}}.fp code{font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-wrap:anywhere;word-break:break-all}.fdesc.fp{margin-top:4px}details.about{margin-top:20px;border:0;padding:0;font-size:14px;color:var(--muted)}.about summary{font-weight:600}.about p,.about ul{margin:8px 0 0}.about ul{padding-left:22px}.about li{margin:4px 0}@page{margin:16mm}@media print{:root{--bg:#fff;--card:#fff;--ink:#000;--muted:#444;--line:#bbb;--link:#000;--imp-bg:#f4f4f4;--imp-ink:#000;--warn-bg:#f4f4f4;--warn-ink:#000}body{font-size:11pt}main{max-width:none;padding:0}h1{font-size:22pt}h1,h2{break-after:avoid}section{break-inside:avoid;padding:14px 16px;margin-bottom:12px}.callout{background:#f4f4f4;border-color:#000}.ctag{color:#000}.callout,.checks li::before,.checks li::after{-webkit-print-color-adjust:exact;print-color-adjust:exact}a.dl{display:none}a{text-decoration:none}.rich a[href^=\"http\"]::after{content:\" (\" attr(href) \")\";font-size:9pt;word-break:break-all}.gallery{grid-template-columns:repeat(3,1fr)}figure,tr{break-inside:avoid}thead{display:table-header-group}.scroll{overflow:visible}.row2{grid-template-columns:1fr 1fr}.tabbar{display:none}.panel{display:block!important}.ptitle{display:block;font-size:16pt;margin:16pt 0 8pt}.zoom[open] summary img{position:static;width:100%;height:auto;background:none;padding:0;border-radius:8px}details::details-content{content-visibility:visible!important;display:block!important}.md pre{break-inside:avoid;white-space:pre-wrap}.md pre code{white-space:pre-wrap}.status,.status.st-review,.status.st-final{background:#fff;color:#000;border-color:#000}.logo{background:none!important;padding:0!important}details.about{display:none!important}summary{list-style:none}summary::-webkit-details-marker{display:none}}@media (max-width:560px){section{padding:16px}th,td{padding:8px 6px}}.hxbar{display:flex;flex-wrap:wrap;gap:8px;margin:-10px 0 22px}details.hx,details.hx:first-of-type{flex:0 1 auto;border:1px solid var(--line);border-radius:999px;padding:4px 14px;background:var(--card);font-size:14px}details.hx[open],details.hx[open]:first-of-type{flex:1 1 100%;border-radius:12px;padding:10px 16px 12px}.hx summary{color:var(--accent-text)}.hx .rich{margin-top:10px}.hxk{margin:10px 0 0}.hxv{font-weight:400;color:var(--muted)}.hxw{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:8px 0 0}.hxw dt{font-weight:600;color:var(--muted)}.hxw dd{margin:0;overflow-wrap:anywhere}.hxw dd p{margin:0 0 6px}.hxw ul{margin:0;padding-left:20px}.hxl{list-style:none;margin:10px 0 0;padding:0}.hxl li{padding:7px 0;border-top:1px solid var(--line)}.hxl li:first-child{border-top:0}.hxs{display:inline-block;padding:0 8px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--muted)}.hxm{color:var(--muted);font-size:13px}@media (max-width:560px){.hxw{grid-template-columns:1fr}.hxw dt{margin-top:6px}}@media print{.hxbar{display:none!important}}"
+DOC_CSS = ":root{--bg:#f6f5f1;--card:#fff;--ink:#1f2328;--muted:#5d646c;--line:#dcd9d0;--accent:#4B8747;--accent-ink:#fff;--accent-text:#3d7039;--link:#b4481e;--imp-bg:#fbefd5;--imp-ink:#7a4d00;--warn-bg:#fce9e9;--warn-ink:#8f2424}@media (prefers-color-scheme:dark){:root{--bg:#16181b;--card:#1f2226;--ink:#e8e6e1;--muted:#a2a8ae;--line:#34383d;--accent:#8fcf8a;--accent-ink:#10240f;--accent-text:#8fcf8a;--link:#f2a071;--imp-bg:#3a2e12;--imp-ink:#f0c36a;--warn-bg:#3d1b1b;--warn-ink:#f2a3a3}}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 system-ui,-apple-system,\"Segoe UI\",Roboto,sans-serif}main{max-width:860px;margin:0 auto;padding:32px 20px 64px}h1{font-size:30px;line-height:1.2;margin:0 0 6px;overflow-wrap:anywhere}h2{font-size:20px;margin:0 0 12px;overflow-wrap:anywhere}h2.group{font-size:22px;margin:30px 0 12px}h1+nav,h1+section,h1+.row2,h1+.tabs{margin-top:20px}.tabbar{display:flex;gap:6px;overflow-x:auto;position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0;margin-bottom:8px}.tabbar a{flex:none;font-size:15px;font-weight:600;padding:7px 14px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);text-decoration:none;white-space:nowrap}.panel{display:none;scroll-margin-top:64px}.panel section,.panel h2.group{scroll-margin-top:70px}.panel:target,.panel:has(:target){display:block}.tabs:not(:has(.panel:target,.panel :target)) .panel:first-of-type{display:block}.ptitle{display:none}@supports not selector(:has(*)){.panel{display:block}.tabbar{display:none}.ptitle{display:block;font-size:24px;margin:28px 0 12px}}p{margin:0 0 12px}.sub{color:var(--muted);margin-bottom:24px}a{color:var(--link);text-decoration:underline;text-underline-offset:2px}a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:22px;margin-bottom:18px}section>:last-child,.rich>:last-child{margin-bottom:0}.rich{overflow-wrap:anywhere}.rich ul,.rich ol{margin:0 0 12px;padding-left:24px}.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}figure{margin:0}.gallery img{width:100%;height:auto;border-radius:8px;display:block}.gallery.one{display:block}.gallery.one img{width:auto;max-width:100%;max-height:460px}figcaption{font-size:14px;color:var(--muted);margin-top:6px}.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:15px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-size:13px;color:var(--muted);font-weight:600}.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}td.act{text-align:right;white-space:nowrap}td.fname{overflow-wrap:anywhere;width:99%}.ft td{vertical-align:middle}a.dl{font-size:14px;font-weight:600;padding:5px 12px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);text-decoration:none;display:inline-block}details{border-top:1px solid var(--line);padding:10px 0}details:first-of-type{border-top:0;padding-top:0}summary{cursor:pointer;font-weight:600}details p{margin:8px 0 0}.toc ul{list-style:none;margin:0;padding:0}.toc li{margin:4px 0}.toc li.sub{padding-left:18px}.checks{list-style:none;margin:0;padding:0}.checks li{position:relative;padding:3px 0 3px 30px;overflow-wrap:anywhere}.checks li::before{content:\"\";position:absolute;left:0;top:7px;width:16px;height:16px;border:2px solid var(--muted);border-radius:4px}.checks li.done{color:var(--muted);text-decoration:line-through}.checks li.done::before{background:var(--accent);border-color:var(--accent)}.checks li.done::after{content:\"\";position:absolute;left:6px;top:9px;width:5px;height:10px;border:solid var(--accent-ink);border-width:0 2px 2px 0;transform:rotate(45deg)}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.row2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}.row2>section{margin-bottom:0;min-width:0}@media (max-width:700px){.row2{grid-template-columns:1fr}}.zoom{border:0;padding:0}.zoom summary{list-style:none;display:block;font-weight:400;cursor:zoom-in}.zoom summary::-webkit-details-marker{display:none}.zoom[open] summary{cursor:zoom-out}.zoom[open] summary img{position:fixed;inset:0;z-index:20;width:100%;height:100%;max-width:none;max-height:none;object-fit:contain;background:rgba(0,0,0,.9);border-radius:0;padding:2vmin}.meta{font-size:14px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin-top:26px}.fdesc{font-size:14px;color:var(--muted);margin-top:2px}.callout{background:color-mix(in srgb,var(--accent) 10%,var(--card));border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}.ctag{font-size:13px;font-weight:700;letter-spacing:.02em;margin:0 0 6px;color:var(--accent-text)}.c-important{background:var(--imp-bg);border-color:var(--imp-ink)}.c-important .ctag{color:var(--imp-ink)}.c-warning{background:var(--warn-bg);border-color:var(--warn-ink)}.c-warning .ctag{color:var(--warn-ink)}.rich h3,.rich h4,.rich h5,.rich h6{margin:18px 0 8px;line-height:1.3;overflow-wrap:anywhere}.rich h3{font-size:18px}.rich h4{font-size:16px}.rich h5,.rich h6{font-size:15px}.rich>:first-child{margin-top:0}.rich ul ul,.rich ol ol,.rich ul ol,.rich ol ul{margin-bottom:0}.rich li{margin:2px 0}.rich li>p{margin:0 0 6px}.md ul.checks{padding-left:0;list-style:none}.md ul.checks li{margin:0}.md code{font:.92em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:color-mix(in srgb,var(--ink) 8%,var(--card));padding:1px 5px;border-radius:5px}.md pre{background:color-mix(in srgb,var(--ink) 6%,var(--card));border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;margin:0 0 12px}.md pre code{background:none;padding:0;font-size:14px;line-height:1.5;white-space:pre}.md pre[data-lang]::before{content:attr(data-lang);display:block;font:700 11px/1 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}.md blockquote{margin:0 0 12px;padding:2px 0 2px 14px;border-left:3px solid var(--accent);color:var(--muted)}.md blockquote>:last-child{margin-bottom:0}.md hr{border:0;border-top:1px solid var(--line);margin:16px 0}.md .scroll{margin-bottom:12px}.ctr{text-align:center}.head{display:flex;gap:18px;align-items:center;margin-bottom:24px}.head .ht{min-width:0;flex:1}.head .sub{margin-bottom:0}.logo{display:block;flex:none;width:auto;height:auto;max-width:110px;max-height:80px;border-radius:6px}.status{display:inline-block;margin:0 0 6px;padding:2px 11px;border:1px solid var(--line);border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.st-review{background:var(--imp-bg);border-color:var(--imp-ink);color:var(--imp-ink)}.st-final{background:color-mix(in srgb,var(--accent) 12%,var(--card));border-color:var(--accent);color:var(--accent-text)}@media (prefers-color-scheme:dark){.logo{background:#fff;padding:6px}}@media (max-width:560px){.head{gap:12px}.logo{max-width:72px;max-height:56px}}.fp code{font:12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-wrap:anywhere;word-break:break-all}.fdesc.fp{margin-top:4px}details.about{margin-top:20px;border:0;padding:0;font-size:14px;color:var(--muted)}.about summary{font-weight:600}.about p,.about ul{margin:8px 0 0}.about ul{padding-left:22px}.about li{margin:4px 0}@page{margin:16mm}@media print{:root{--bg:#fff;--card:#fff;--ink:#000;--muted:#444;--line:#bbb;--link:#000;--imp-bg:#f4f4f4;--imp-ink:#000;--warn-bg:#f4f4f4;--warn-ink:#000}body{font-size:11pt}main{max-width:none;padding:0}h1{font-size:22pt}h1,h2{break-after:avoid}section{break-inside:avoid;padding:14px 16px;margin-bottom:12px}.callout{background:#f4f4f4;border-color:#000}.ctag{color:#000}.callout,.checks li::before,.checks li::after{-webkit-print-color-adjust:exact;print-color-adjust:exact}a.dl{display:none}a{text-decoration:none}.rich a[href^=\"http\"]::after{content:\" (\" attr(href) \")\";font-size:9pt;word-break:break-all}.gallery{grid-template-columns:repeat(3,1fr)}figure,tr{break-inside:avoid}thead{display:table-header-group}.scroll{overflow:visible}.row2{grid-template-columns:1fr 1fr}.tabbar{display:none}.panel{display:block!important}.ptitle{display:block;font-size:16pt;margin:16pt 0 8pt}.zoom[open] summary img{position:static;width:100%;height:auto;background:none;padding:0;border-radius:8px}details::details-content{content-visibility:visible!important;display:block!important}.md pre{break-inside:avoid;white-space:pre-wrap}.md pre code{white-space:pre-wrap}.status,.status.st-review,.status.st-final{background:#fff;color:#000;border-color:#000}.logo{background:none!important;padding:0!important}details.about{display:none!important}summary{list-style:none}summary::-webkit-details-marker{display:none}}@media (max-width:560px){section{padding:16px}th,td{padding:8px 6px}}.hxbar{display:flex;flex-wrap:wrap;gap:8px;margin:-10px 0 22px}details.hx,details.hx:first-of-type{flex:0 1 auto;border:1px solid var(--line);border-radius:999px;padding:4px 14px;background:var(--card);font-size:14px}details.hx[open],details.hx[open]:first-of-type{flex:1 1 100%;border-radius:12px;padding:10px 16px 12px}.hx summary{color:var(--accent-text)}.hx .rich{margin-top:10px}.hxk{margin:10px 0 0}.hxv{font-weight:400;color:var(--muted)}.hxw{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:8px 0 0}.hxw dt{font-weight:600;color:var(--muted)}.hxw dd{margin:0;overflow-wrap:anywhere}.hxw dd p{margin:0 0 6px}.hxw ul{margin:0;padding-left:20px}.hxl{list-style:none;margin:10px 0 0;padding:0}.hxl li{padding:7px 0;border-top:1px solid var(--line)}.hxl li:first-child{border-top:0}.hxs{display:inline-block;padding:0 8px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--muted)}.hxm{color:var(--muted);font-size:13px}@media (max-width:560px){.hxw{grid-template-columns:1fr}.hxw dt{margin-top:6px}}@media print{.hxbar{display:none!important}}:root{--bad-bg:#f8dcdc;--bad-ink:#7a1515;--ok-bg:#e1f0de;--ok-ink:#2c6528}@media (prefers-color-scheme:dark){:root{--bad-bg:#4a1818;--bad-ink:#ffb4b4;--ok-bg:#1c3420;--ok-ink:#9ed79a}}.c-danger{background:var(--bad-bg);border-color:var(--bad-ink);border-left-width:6px}.c-danger .ctag{color:var(--bad-ink)}.c-success{background:var(--ok-bg);border-color:var(--ok-ink)}.c-success .ctag{color:var(--ok-ink)}.chip{display:inline-block;padding:2px 9px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.02em;line-height:1.6;white-space:nowrap}.chip.t-good{background:var(--ok-bg);color:var(--ok-ink);border-color:transparent}.chip.t-caution{background:var(--imp-bg);color:var(--imp-ink);border-color:transparent}.chip.t-bad{background:var(--bad-bg);color:var(--bad-ink);border-color:transparent}.eyebrow{margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-text)}h1.lg{font-size:clamp(32px,6vw,48px);letter-spacing:-.02em}.facts{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:12px 0 0;padding:0}.facts li{font-size:13px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 11px}.secbar{position:sticky;top:0;z-index:5;display:flex;gap:6px;overflow-x:auto;padding:8px 2px;margin:0 0 16px;background:var(--bg);border-bottom:1px solid var(--line);scrollbar-width:thin}.secbar a{flex:0 0 auto;font-size:13px;font-weight:600;text-decoration:none;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 12px}.secbar a:hover{border-color:var(--accent)}[id^=\"s-\"]{scroll-margin-top:64px}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.stat{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px}.stat b{display:block;font-size:24px;line-height:1.15;color:var(--accent-text)}.stat span{display:block;font-weight:600;font-size:14px;margin-top:3px}.stat small{display:block;color:var(--muted);font-size:13px;margin-top:2px}.cards{list-style:none;margin:0;padding:0;display:grid;gap:10px}.cards>li{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px}.cards.plain>li{grid-template-columns:1fr auto}.cn{width:34px;height:34px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:800}.cards h3{margin:5px 0 4px;font-size:17px}.cards .rich>:first-child{margin-top:0}.cards .rich>:last-child{margin-bottom:0}.ctags{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:280px;margin:4px 0 0}@media (max-width:640px){.cards>li{grid-template-columns:auto 1fr}.cards.plain>li{grid-template-columns:1fr}.ctags{grid-column:1/-1;justify-content:flex-start;max-width:none}}.srcg{margin:14px 0 4px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}.srcg:first-child{margin-top:0}.srcs{margin:0;padding-left:20px}.srcs li{margin:4px 0;overflow-wrap:anywhere}.acc{color:var(--muted);font-size:13px}@media print{.secbar{display:none!important}.cards>li,.stat{break-inside:avoid}}"
 
 # ---------------------------------------------------------------------------
 # Markdown subset converter. A line-for-line port of the editor's mdRender, so
@@ -1031,7 +1033,7 @@ def _render_block(b, doc, assets):
                         all_ = False
             num.append(any_ and all_)
         head = "<tr>" + "".join("<th" + (' class="num"' if num[i] else "") + ' scope="col">' + esc(x) + "</th>" for i, x in enumerate(rows[0])) + "</tr>"
-        body = "".join("<tr>" + "".join("<td" + (' class="num"' if num[i] else "") + ">" + esc(x) + "</td>" for i, x in enumerate(row)) + "</tr>"
+        body = "".join("<tr>" + "".join("<td" + (' class="num"' if num[i] else "") + ">" + chip_html(x) + "</td>" for i, x in enumerate(row)) + "</tr>"
                        for row in rows[1:] if any(trim(x) for x in row))
         if not body:
             return ""
@@ -1050,6 +1052,33 @@ def _render_block(b, doc, assets):
     if t == "checklist":
         li = "".join("<li" + (' class="done"><span class="vh">Done: </span>' if it["done"] else ">") + esc(trim(it["text"])) + "</li>" for it in b["items"] if trim(it["text"]))
         return _section(b, '<ul class="checks">' + li + "</ul>") if (li or trim(b["title"])) else ""
+    if t == "stats":
+        d = "".join('<div class="stat"><b>' + esc(trim(it["value"])) + "</b>" + ("<span>" + esc(trim(it["label"])) + "</span>" if trim(it["label"]) else "")
+                    + ("<small>" + esc(trim(it["note"])) + "</small>" if trim(it["note"]) else "") + "</div>" for it in b["items"] if trim(it["value"]) or trim(it["label"]))
+        return _section(b, '<div class="stats">' + d + "</div>" if d else "") if (d or trim(b["title"])) else ""
+    if t == "cards":
+        li = []
+        for it in b["items"]:
+            if not (trim(it["title"]) or trim(it["body"]) or it["tags"]):
+                continue
+            li.append("<li>" + ('<span class="cn" aria-hidden="true">' + str(len(li) + 1) + "</span>" if b["numbered"] else "") + "<div>"
+                      + ("<h3>" + esc(trim(it["title"])) + "</h3>" if trim(it["title"]) else "")
+                      + ('<div class="rich md">' + md_render(it["body"]) + "</div>" if trim(it["body"]) else "") + "</div>"
+                      + ('<p class="ctags">' + "".join('<span class="chip t-' + g["tone"] + '">' + esc(trim(g["text"])) + "</span>" for g in it["tags"]) + "</p>" if it["tags"] else "")
+                      + "</li>")
+        li = "".join(li)
+        return _section(b, '<ol class="cards' + ("" if b["numbered"] else " plain") + '">' + li + "</ol>" if li else "") if (li or trim(b["title"])) else ""
+    if t == "sources":
+        out = ""
+        for g, items in _source_groups(b):
+            out += ("<h3 class=\"srcg\">" + esc(g) + "</h3>" if g else "") + '<ul class="srcs">'
+            for it in items:
+                hr = safe_href(it["url"])
+                tx = esc(trim(it["title"]) or trim(it["url"]))
+                out += ("<li>" + ('<a href="' + esc(hr) + '">' + tx + "</a>" if hr else tx) + (' <span class="acc">accessed ' + it["accessed"] + "</span>" if it["accessed"] else "")
+                        + (' <span class="acc">\u00b7 ' + esc(trim(it["note"])) + "</span>" if trim(it["note"]) else "") + "</li>")
+            out += "</ul>"
+        return _section(b, '<div class="sources">' + out + "</div>" if out else "") if (out or trim(b["title"])) else ""
     if t == "files":
         rows = []
         for id_ in b["items"]:
@@ -1155,6 +1184,24 @@ def hx_panels(doc, assets):
     return '<div class="hxbar">\n' + out + "</div>\n" if out else ""
 
 
+def chip_html(x):
+    m = re.fullmatch(r"\[\[([^\]|]+?)(?:\|(neutral|good|caution|bad))?\]\]", trim(x))
+    return '<span class="chip t-' + (m.group(2) or "neutral") + '">' + esc(trim(m.group(1))) + "</span>" if m and trim(m.group(1)) else esc(x)
+
+
+def _source_groups(b):
+    groups, by = [], {}
+    for it in b["items"]:
+        if not (trim(it["title"]) or trim(it["url"])):
+            continue
+        g = trim(it["group"])
+        if g not in by:
+            by[g] = []
+            groups.append(g)
+        by[g].append(it)
+    return [(g, by[g]) for g in groups]
+
+
 def _render_tab(t, doc, assets):
     parts = []
     toc = []
@@ -1182,7 +1229,11 @@ def _render_tab(t, doc, assets):
     if doc["options"]["toc"] and len(toc) > 1:
         nav = ('<nav class="toc" aria-label="Contents"><section><h2>Contents</h2><ul>'
                + "".join("<li" + (' class="sub"' if sub else "") + '><a href="#s-' + id_ + '">' + esc(tx) + "</a></li>" for id_, tx, sub in toc) + "</ul></section></nav>\n")
-    return nav + body
+    top = [(id_, tx) for id_, tx, sub in toc if not sub]
+    bar = ""
+    if doc["options"].get("nav") is True and len(top) > 1:
+        bar = '<nav class="secbar" aria-label="Sections">' + "".join('<a href="#s-' + id_ + '">' + esc(tx) + "</a>" for id_, tx in top) + "</nav>\n"
+    return bar + nav + body
 
 
 def about_html(has_files):
@@ -1284,7 +1335,12 @@ def render(doc, assets, today=None):
         foot = '<footer class="meta">' + ' <span aria-hidden="true">\u00b7</span> '.join(bits) + "</footer>\n"
     lg = assets.get(doc["options"]["logo"])
     st = doc["options"]["status"] if doc["options"]["status"] in STATUS else ""
-    h1 = "<h1>" + esc(title) + "</h1>\n" + ('<p class="sub">' + esc(trim(doc["subtitle"])) + "</p>\n" if trim(doc["subtitle"]) else "")
+    op = doc["options"]
+    eb = trim(op.get("eyebrow", ""))
+    facts = op.get("facts", [])
+    h1 = (('<p class="eyebrow">' + esc(eb) + "</p>\n" if eb else "") + "<h1" + (' class="lg"' if op.get("titleSize") == "large" else "") + ">" + esc(title) + "</h1>\n"
+          + ('<p class="sub">' + esc(trim(doc["subtitle"])) + "</p>\n" if trim(doc["subtitle"]) else "")
+          + ('<ul class="facts">' + "".join("<li>" + esc(trim(x)) + "</li>" for x in facts) + "</ul>\n" if facts else ""))
     if lg or st:
         h1 = ('<header class="head">\n' + ('<img class="logo" id="asset-' + doc["options"]["logo"] + '" alt="Logo" src="data:' + lg["type"] + ";base64," + lg["b64"] + '">\n' if lg else "")
               + '<div class="ht">\n' + ('<p class="status st-' + st + '">' + STATUS[st] + "</p>\n" if st else "") + h1 + "</div>\n</header>\n")
@@ -1296,7 +1352,8 @@ def render(doc, assets, today=None):
     n_files = len(assets) - (1 if doc["options"]["logo"] in assets else 0)
     return ('<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n'
             + '<meta http-equiv="Content-Security-Policy" content="' + DOC_CSP + '">\n<meta name="generator" content="' + GENERATOR + '">\n'
-            + "<title>" + esc(title) + '</title>\n<script type="application/json" id="doc-source">' + source + "</script>\n<style>" + DOC_CSS + tint + tabcss + "</style>\n</head>\n<body>\n<main>\n"
+            + "<title>" + esc(title) + "</title>\n" + ('<link rel="icon" href="data:' + lg["type"] + ";base64," + lg["b64"] + '">\n' if lg and lg["bytes"] <= ICON_MAX else "")
+            + '<script type="application/json" id="doc-source">' + source + "</script>\n<style>" + DOC_CSS + tint + tabcss + "</style>\n</head>\n<body>\n<main>\n"
             + h1 + hx_panels(doc, assets) + body + foot + (about_html(n_files > 0) if doc["options"]["about"] else "") + "</main>\n</body>\n</html>\n")
 
 
@@ -1304,7 +1361,7 @@ def render(doc, assets, today=None):
 # Loading: a port of the editor's loader. It accepts the JSON stored in a document
 # (and the older layouts) and returns a clean document plus its attachments.
 # ---------------------------------------------------------------------------
-_BLOCK_TYPES = ("heading", "text", "markdown", "images", "table", "collapsible", "checklist", "callout", "files")
+_BLOCK_TYPES = ("heading", "text", "markdown", "images", "table", "collapsible", "checklist", "callout", "files", "stats", "cards", "sources")
 
 
 def _s(x):
@@ -1468,6 +1525,15 @@ def load_data(data, find, ids=None):
                                  "date": fo.get("date") if isinstance(fo.get("date"), str) and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", fo.get("date")) else ""},
                       "logo": "", "status": op.get("status") if _has(STATUS, op.get("status")) else "", "fingerprints": _b(op.get("fingerprints")), "about": _b(op.get("about"))},
           "tabs": []}
+    # Settings added in 1.2 are kept only when used, so older files keep their exact form and hash.
+    if trim(_s(op.get("eyebrow"))):
+        nd["options"]["eyebrow"] = _s(op.get("eyebrow"))
+    if _strs(op.get("facts")):
+        nd["options"]["facts"] = _strs(op.get("facts"))
+    if op.get("titleSize") == "large":
+        nd["options"]["titleSize"] = "large"
+    if op.get("nav") is True:
+        nd["options"]["nav"] = True
     assets = {}
     state = {"missing": 0, "bad": [], "seen": set()}
 
@@ -1552,6 +1618,33 @@ def load_data(data, find, ids=None):
                 if t == "callout":
                     b["tone"] = s.get("tone") if _has(TONES, s.get("tone")) else "note"
                     b["text"] = _s(s.get("text"))
+                if t == "stats":
+                    its = s.get("items") if isinstance(s.get("items"), list) else []
+                    b["items"] = [{"value": _s(i.get("value") if isinstance(i, dict) else None), "label": _s(i.get("label") if isinstance(i, dict) else None),
+                                   "note": _s(i.get("note") if isinstance(i, dict) else None)} for i in its] or [{"value": "", "label": "", "note": ""}]
+                if t == "cards":
+                    its = s.get("items") if isinstance(s.get("items"), list) else []
+                    b["numbered"] = s.get("numbered") is not False
+                    b["items"] = []
+                    for i in its:
+                        i = i if isinstance(i, dict) else {}
+                        tg = i.get("tags") if isinstance(i.get("tags"), list) else []
+                        b["items"].append({"title": _s(i.get("title")), "body": _s(i.get("body")).replace("\r\n", "\n").replace("\r", "\n"),
+                                           "tags": [{"text": _s(g.get("text")), "tone": g.get("tone") if _has(CHIP, g.get("tone")) else "neutral"}
+                                                    for g in tg if isinstance(g, dict) and trim(_s(g.get("text")))]})
+                    if not b["items"]:
+                        b["items"] = [{"title": "", "body": "", "tags": []}]
+                if t == "sources":
+                    its = s.get("items") if isinstance(s.get("items"), list) else []
+                    b["items"] = []
+                    for i in its:
+                        i = i if isinstance(i, dict) else {}
+                        ac = i.get("accessed")
+                        b["items"].append({"title": _s(i.get("title")), "url": _s(i.get("url")),
+                                           "accessed": ac if isinstance(ac, str) and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", ac) else "",
+                                           "group": _s(i.get("group")), "note": _s(i.get("note"))})
+                    if not b["items"]:
+                        b["items"] = [{"title": "", "url": "", "accessed": "", "group": "", "note": ""}]
                 if t == "collapsible":
                     its = s.get("items") if isinstance(s.get("items"), list) else []
                     b["items"] = [{"summary": _s(i.get("summary") if isinstance(i, dict) else None), "body": _s(i.get("body") if isinstance(i, dict) else None)} for i in its]
@@ -1666,6 +1759,12 @@ def block_text(b, assets):
         return "\n".join((assets[it["asset"]]["name"] if it["asset"] in assets else "") + (": " + it["caption"] if it["caption"] else "") for it in b["items"])
     if t == "files":
         return "\n".join((assets[i]["name"] if i in assets else "") + (": " + b["notes"][i] if i in b["notes"] else "") for i in b["items"])
+    if t == "stats":
+        return "\n".join(" ".join(x for x in (it["value"], it["label"], it["note"]) if trim(x)) for it in b["items"])
+    if t == "cards":
+        return "\n".join(it["title"] + (" [" + ", ".join(g["text"] for g in it["tags"]) + "]" if it["tags"] else "") + ("\n" + it["body"] if trim(it["body"]) else "") for it in b["items"])
+    if t == "sources":
+        return "\n".join(" ".join(x for x in (it["group"], it["title"], it["url"], it["accessed"], it["note"]) if trim(x)) for it in b["items"])
     return ""
 
 
@@ -2340,6 +2439,30 @@ def _ex_paras(t):
 
 def _ex_body(b, assets, paths):
     t = b["type"]
+    if t == "stats":
+        return "\n".join("- " + " ".join(x for x in ["**" + _ex_plain(trim(it["value"])) + "**" if trim(it["value"]) else "", _ex_plain(trim(it["label"])),
+                                                    "(" + _ex_plain(trim(it["note"])) + ")" if trim(it["note"]) else ""] if x)
+                         for it in b["items"] if trim(it["value"]) or trim(it["label"]))
+    if t == "cards":
+        out = []
+        for it in b["items"]:
+            if not (trim(it["title"]) or trim(it["body"]) or it["tags"]):
+                continue
+            head = trim((str(len(out) + 1) + ". " if b["numbered"] else "") + trim(it["title"]))
+            out.append(("**" + _ex_plain(head) + "**" if head else "") + (("" if not head else " ") + "*" + " \u00b7 ".join(_ex_plain(trim(g["text"])) for g in it["tags"]) + "*" if it["tags"] else "")
+                       + ("\n\n" + trim(it["body"]) if trim(it["body"]) else ""))
+        return "\n\n".join(out)
+    if t == "sources":
+        parts = []
+        for g, items in _source_groups(b):
+            lines = []
+            for it in items:
+                hr = safe_href(it["url"])
+                tx = _ex_plain(trim(it["title"]) or trim(it["url"]))
+                lines.append("- " + ("[" + tx + "](" + hr.replace(" ", "%20").replace("(", "%28").replace(")", "%29") + ")" if hr else tx)
+                             + (" (accessed " + it["accessed"] + ")" if it["accessed"] else "") + (" - " + _ex_plain(trim(it["note"])) if trim(it["note"]) else ""))
+            parts.append(("**" + _ex_plain(g) + "**\n\n" if g else "") + "\n".join(lines))
+        return "\n\n".join(parts)
     if t == "text":
         return _ex_html(sanitize(b["html"]))
     if t == "markdown":
@@ -2479,7 +2602,10 @@ def spec_from_document(doc, assets, paths):
         elif t == "callout":
             o["tone"] = b["tone"]
             o["text"] = b["text"]
-        elif t in ("collapsible", "checklist"):
+        elif t in ("collapsible", "checklist", "stats", "sources"):
+            o["items"] = b["items"]
+        elif t == "cards":
+            o["numbered"] = b["numbered"]
             o["items"] = b["items"]
         elif t == "table":
             o["rows"] = b["rows"]

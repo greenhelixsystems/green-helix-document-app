@@ -42,12 +42,8 @@ with sync_playwright() as p:
     check("hand-over: the About note is in the data block and on the page", data.get("about", "").startswith("This is a Helix document") and 'class="about"' in h)
     page.click("#btn-options"); check("hand-over: the Options panel shows fingerprints ticked", page.is_checked("#opt-fp") and page.is_checked("#opt-about") if page.locator("#opt-about").count() else page.is_checked("#opt-fp"))
     page.click("#btn-options")
-    # exports work on a template
-    page.click("#btn-options")
-    with page.expect_download() as dd: page.click("#btn-ai")
-    dd.value.save_as(T + "/hand.zip"); import zipfile; z = zipfile.ZipFile(T + "/hand.zip")
-    md = z.read("content.md").decode(); check("hand-over: Export for AI gives content.md with tabs as ## headings", "## Brief" in md and "## Data" in md and "## Instructions" in md and "**Status:** Draft" in md)
-    page.click("#btn-options")
+    # the Markdown export works on a template
+    md = page.evaluate("window.__pde.toMd()"); check("hand-over: the Markdown export has tabs as ## headings", "## Brief" in md and "## Data" in md and "## Instructions" in md and "**Status:** Draft" in md)
 
     # reopen the saved files: identical re-save and editor/Python agree
     for name in ("delivery.helix.html", "handover.helix.html"):

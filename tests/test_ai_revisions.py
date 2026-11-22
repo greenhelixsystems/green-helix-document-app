@@ -41,7 +41,7 @@ v1 = read(T + "/Shed_v1.helix.html"); d1 = data_of(v1)
 keys = list(d1.keys())
 check("data block order: identity first, AI Notes before the content, log last",
       keys[:5] == ["format", "version", "spec", "id", "rev"] and keys.index("ai") < keys.index("title") < keys.index("tabs") < keys.index("assets") < keys.index("log"), keys)
-check("spec 1.1, version 1, a document id, revision 1 with a hash", d1["spec"] == "1.1" and d1["version"] == 1 and d1["id"].startswith("hx-") and d1["rev"]["n"] == 1 and d1["rev"]["label"] == "1" and len(d1["rev"]["hash"]) == 64)
+check("spec " + hx.SPEC + ", version 1, a document id, revision 1 with a hash", d1["spec"] == hx.SPEC and d1["version"] == 1 and d1["id"].startswith("hx-") and d1["rev"]["n"] == 1 and d1["rev"]["label"] == "1" and len(d1["rev"]["hash"]) == 64)
 check("AI Notes come within the first 2.5 KB of the file", v1.index('"ai":') < 2500, v1.index('"ai":'))
 blk = {b["title"] if b["type"] != "heading" else b["text"]: b["id"] for t in d1["tabs"] for b in t["blocks"]}
 check("friendly ids in the spec become real ids, and AI Notes point at them",

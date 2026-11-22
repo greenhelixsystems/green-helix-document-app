@@ -212,7 +212,7 @@ with sync_playwright() as p:
               miss == 0 and raw()["doc"]["options"]["status"] == "" and raw()["doc"]["options"]["logo"] == "",
               olds[0])
         nostyle = lambda x: re.sub(r"<style>.*?</style>", "<style></style>", x, flags=re.S)
-        body = lambda x: re.sub(r"\n\n+", "\n", re.sub(r'<script type="application/json" id="doc-source">.*?</script>', "", nostyle(x), flags=re.S)).replace("Editor 6", "Editor X").replace("Editor 1.0", "Editor X").replace("Editor 1.1", "Editor X")
+        body = lambda x: re.sub(r"\n\n+", "\n", re.sub(r'<script type="application/json" id="doc-source">.*?</script>', "", nostyle(x), flags=re.S)).replace("Editor 6", "Editor X").replace("Editor 1.0", "Editor X").replace("Editor 1.1", "Editor X").replace("Editor 1.2", "Editor X")
         check("  ...and the visible document is identical (style and data block aside)", body(old) == body(h3), (len(body(old)), len(body(h3))))
 
     # ---------------------------------------------------------------- phone layout of the editor

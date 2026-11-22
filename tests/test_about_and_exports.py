@@ -63,7 +63,7 @@ with sync_playwright() as p:
     labels = page.locator(".adder button").all_inner_texts()
     check("Key details is gone from the Add row", "Key details" not in labels and page.locator('[data-add="keyvalues"]').count() == 0, labels)
     tops = page.locator(".adder button").evaluate_all("els=>[...new Set(els.map(e=>Math.round(e.getBoundingClientRect().top)))]")
-    check("the whole Add row fits on one line again", len(tops) == 1, tops)
+    check("the Add row wraps onto at most two lines (twelve block types since 1.2)", 1 <= len(tops) <= 2 and len(labels) == 12, (tops, len(labels)))
     check("footer says A free tool from Green Helix Systems", page.locator(".promo-head strong").inner_text() == "A free tool from Green Helix Systems", page.locator(".promo-head strong").inner_text())
     check("footer still has exactly the two buttons", page.locator(".promo a").all_inner_texts() == ["Try the Free Financial Simplicity Assessment →", "Explore Financial Planning →"])
     page.click('[data-add="files"]')
@@ -84,7 +84,7 @@ with sync_playwright() as p:
     check("data block ends before the first embedded file", js_end < first_b64, (js_end, first_b64))
     check("only 1 script element in the whole file", html.count("<script") == 1 and html.count("</script>") == 1)
     check("everything an AI needs sits in the first 40 KB", js_end < 40000, js_end)
-    check("format helix version 1, spec 1.1, generator " + short_ver, src["format"] == "helix" and src["version"] == 1 and src["spec"] == "1.1" and ('Document Editor %s"' % short_ver) in html)
+    check("format helix version 1, spec 1.2, generator " + short_ver, src["format"] == "helix" and src["version"] == 1 and src["spec"] == "1.2" and ('Document Editor %s"' % short_ver) in html)
     check("data lists every attachment with a fingerprint", all(v.get("sha256") for v in src["assets"].values()) and len(src["assets"]) == 2)
     check("data block has no file bytes in it", "base64," not in html[:js_end] and "data:image" not in html[:js_end] and "data:application" not in html[:js_end])
 
@@ -127,7 +127,7 @@ with sync_playwright() as p:
     nj.goto("file://" + path)
     check("phone: no sideways scrolling", nj.evaluate("document.documentElement.scrollWidth<=window.innerWidth+1"))
 
-    # ---------------------------------------------------------------- Export for AI
+    # ---------------------------------------------------------------- Markdown export (the same Markdown as helix.py unpack and get --md)
     page.evaluate("t=>window.__pde.load(t)", html)
     md = page.evaluate("window.__pde.toMd()")
     open(T + "/content.md", "w", encoding="utf-8").write(md)
@@ -148,28 +148,8 @@ with sync_playwright() as p:
     rendered = page.evaluate("m=>window.__pde.md(m)", md)
     check("md renders through the editor's own Markdown converter", "<h3>Export test</h3>" in rendered and "<h4>Main</h4>" in rendered and "<table>" in rendered and "<strong>bold</strong>" in rendered)
 
-    with page.expect_download() as d:
-        page.click("#btn-options"); page.click("#btn-ai")
-    zp = T + "/" + d.value.suggested_filename; d.value.save_as(zp); z = zipfile.ZipFile(zp)
-    names = sorted(z.namelist())
-    check("zip is named -for-ai.zip", zp.endswith("export-test-for-ai.zip") or zp.endswith("-for-ai.zip"), os.path.basename(zp))
-    check("zip contains content.md, the files and the checksums", names == ["SHA256SUMS.txt", "content.md", "files/report (final).pdf", "images/small.jpg"], names)
-    check("zip files are byte-identical to the originals", z.read("files/report (final).pdf") == open(PDF, "rb").read() and z.read("images/small.jpg") == open(IMG, "rb").read())
-    check("zip's content.md equals the exported Markdown", z.read("content.md").decode("utf-8") == md)
-    sums = dict((l.split("  ", 1)[1], l.split("  ", 1)[0]) for l in z.read("SHA256SUMS.txt").decode().strip().split("\n"))
-    check("SHA256SUMS.txt is correct (sha256sum format)", all(sha(z.read(n)) == h_ for n, h_ in sums.items()) and set(sums) == {"files/report (final).pdf", "images/small.jpg"})
-    links = [urllib.parse.unquote(x) for x in re.findall(r"\]\(((?:files|images)/[^)]+)\)", md)]
-    check("every path in content.md exists in the zip", links and all(l in names for l in links), links)
-    check("notice describes the export", "Exported content.md and 2 files" in notice(), notice())
     page.click("#btn-options")
-
-    # no files at all: content.md only
-    page.click("#btn-new"); page.click('[data-tpl="blank"]'); page.fill("#doc-title", "Just words")
-    page.click('[data-add="text"]'); page.locator(".rich").click(); page.keyboard.type("Only text here.")
-    with page.expect_download() as d:
-        page.click("#btn-options"); page.click("#btn-ai")
-    z2 = zipfile.ZipFile(d.value.path())
-    check("a document with no files exports content.md alone", z2.namelist() == ["content.md"] and b"Only text here." in z2.read("content.md"), z2.namelist())
+    check("Export for AI is gone: the file itself is the AI format (helix.py unpack still makes loose files)", page.locator("#btn-ai").count() == 0 and page.locator("#btn-zip").count() == 1)
     page.click("#btn-options")
 
     # ---------------------------------------------------------------- frozen older documents
