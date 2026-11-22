@@ -1,6 +1,6 @@
 # The Helix document format
 
-*Version 1 (Helix 1.1), a plain-language draft. The reference implementation is [`tools/helix.py`](../tools/helix.py); the most detailed description is section 12 of [`guide/HELIX-guide.md`](../guide/HELIX-guide.md). This text is licensed CC BY 4.0.*
+*Version 1 (Helix 1.2), a plain-language draft. The reference implementation is [`tools/helix.py`](../tools/helix.py); the most detailed description is section 12 of [`guide/HELIX-guide.md`](../guide/HELIX-guide.md). This text is licensed CC BY 4.0.*
 
 ## Goal
 
@@ -48,14 +48,16 @@ JSON with these top-level keys:
 | `about` | The same words as the visible "About this file" section (present when the option is on) |
 | `ai` | AI Notes: `notes` (Markdown), `focus` and `protect` (block or tab ids), optional `work` (an assignment) |
 | `title`, `subtitle` | Text |
-| `options` | `toc`, `accent`, `footer`, `logo`, `status`, `fingerprints`, `about` |
+| `options` | `toc`, `accent`, `footer`, `logo`, `status`, `fingerprints`, `about`, and when used (1.2): `eyebrow`, `facts`, `titleSize`, `nav` |
 | `tabs` | Ordered tabs, each with an `id`, a `title` and ordered `blocks` |
 | `assets` | One entry per image or file: `name`, `type`, `bytes`, `sha256` |
 | `log` | Revision Log entries: `rev`, `label`, `at`, `by`, `kind`, `summary`, `blocks`, `status`, `checks`, `note`, and the handback `task`, `questions`, `next`, `review` |
 
 Keys appear in this order and empty values are left out, so the identity and the AI Notes come first.
 
-Block types: `heading`, `text`, `markdown`, `callout`, `checklist`, `table`, `collapsible`, `images`, `files`. The exact fields of each are in the guide (section 4 and section 12).
+Block types: `heading`, `text`, `markdown`, `callout`, `checklist`, `table`, `collapsible`, `images`, `files`, and since 1.2 `stats` (stat tiles), `cards` (numbered or plain cards with coloured tags) and `sources` (title, link, date accessed, group, note). Callout tones are `note`, `important`, `warning`, `danger` and `success`. A table cell written as `[[Label|tone]]` shows as a status chip. The exact fields of each are in the guide (section 4 and section 12).
+
+**Additions never change existing files.** A new setting is written only when it is used, and a new block type appears only when someone adds one. A file that uses none of them is exactly what the previous version wrote, with the same revision hash.
 
 Every `<` in the JSON is written `<`, so the data can never end the script element early.
 
@@ -96,4 +98,4 @@ The **Revision Log** button shows each revision: who made it, what it changed an
 
 ## Stability
 
-Version 1 is the first public version. Additions that old readers can safely ignore raise `spec` (1.1 is the first). Changes that old readers cannot understand will increase `version`; software must not save over a file whose `version` it does not know. The editor keeps reading earlier versions. Software older than 1.1 does not know the 1.1 fields and drops them if it saves a 1.1 file.
+Version 1 is the first public version. Additions that old readers can safely ignore raise `spec` (1.1 added identity, revisions and AI Notes; 1.2 added report blocks and title-area settings). Software that does not know a block type leaves it out when it saves, so open 1.2 files that use new blocks in 1.2 software. Changes that old readers cannot understand will increase `version`; software must not save over a file whose `version` it does not know. The editor keeps reading earlier versions. Software older than 1.1 does not know the 1.1 fields and drops them if it saves a 1.1 file.

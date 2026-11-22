@@ -4,7 +4,7 @@ Make one file that holds a whole deliverable: written sections, tables, checklis
 
 These files are called **Helix documents** and end in `.helix.html`. The editor that makes them is a single HTML file you can keep, run offline, or install on a phone.
 
-**Version 1.1.** Open source: code under Apache-2.0, written material under CC BY 4.0 (see [NOTICE.md](NOTICE.md)).
+**Version 1.2.** Open source: code under Apache-2.0, written material under CC BY 4.0 (see [NOTICE.md](NOTICE.md)).
 
 ## Try it
 
@@ -24,8 +24,9 @@ Nothing you type or attach leaves your device. There is no server, no account an
 - **Attached files, byte for byte.** Files are embedded exactly as they were. Each can carry a SHA-256 fingerprint so the reader can confirm it has not changed.
 - **Looks right everywhere.** Light and dark mode, phone layout, a print layout that includes every tab, five accent colours, an optional logo, status label (Draft, For review, Final), contents list and footer.
 - **Starting points.** Blank, project tracker, meeting notes, client package, client delivery and AI hand-over.
-- **Readable by people and machines.** The complete content is also stored as JSON at the very start of the file, with a visible "About this file" note explaining it. **Export for AI (.zip)** produces plain `content.md` plus the original files and images, but an AI does not need it.
+- **Readable by people and machines.** The complete content is also stored as JSON at the very start of the file, with a visible "About this file" note explaining it. `helix.py unpack` produces plain `content.md` plus the original files when loose files are wanted, but an AI does not need them.
 - **AI Notes and a Revision Log** (new in 1.1). Two small buttons under the title. *AI Notes* hold instructions for AI assistants, the sections to focus on, the sections to leave alone and an optional assignment. *Revision Log* shows every version: who changed what, and when. Both are visible to readers, collapsed by default and never printed.
+- **Report-style blocks** (new in 1.2). Stat tiles, numbered option cards with coloured tags, status chips in tables, Danger and Success callouts, and a sources block that records when each source was read. An optional title area (a small line above the title, key-fact pills, a large title) and a sticky section bar make long reports easy to read. See [the example report](examples/research-report/).
 - **Versions that travel with the file** (new in 1.1). Each document has a permanent id and a version number. Saving changes makes the next version, named `Report_v1.1.helix.html`. Ids of tabs, blocks and files never change, so an assistant can change one section and leave everything else byte for byte.
 - **Easy to reopen.** Open the file in the editor and everything is editable again: tabs, blocks, attachments and options.
 
@@ -60,7 +61,7 @@ editor/    the desktop editor: one HTML file (generated from src/)
 mobile/    the same editor packaged as an installable web app; published to GitHub Pages
 tools/     helix.py, the build / unpack / check tool (one Python file, standard library only)
 guide/     HELIX-guide.md (full instructions, with helix.py included), HELIX-WORKFLOW.md and HELIX-QUICKSTART.md
-examples/  a worked project handoff between two AI assistants
+examples/  a worked project handoff between two AI assistants, and a report in the 1.2 style
 docs/      FORMAT.md, the format described in plain language
 src/       the source everything above is built from
 build/     build.py, which regenerates the generated folders from src/

@@ -1,0 +1,53 @@
+{
+ "id": "hx-5e5e5e5e5e5e5e5e",
+ "title": "Riverside Garden: Outreach Options",
+ "subtitle": "Which channels a volunteer team can run each week, what needs approval first, and what to leave for later.",
+ "by": "Research AI",
+ "kind": "ai",
+ "ai": {
+  "notes": "## Purpose\n\nAn example research report in the Helix 1.2 report style. All names, figures and links are invented.\n\n## For the next AI\n\n- Update the **Ranked options** only when the committee changes priorities.\n- Keep **Hard limits** exactly as written.\n- Every new claim needs a source with the date it was read; add it to **Sources**.",
+  "focus": ["options"],
+  "protect": ["limits"]
+ },
+ "options": {
+  "eyebrow": "Research • 21 November 2026 • Example data",
+  "facts": ["Nothing was posted or signed up for", "No costs are quoted, because none were verified", "Every option needs committee approval"],
+  "titleSize": "large",
+  "nav": true,
+  "status": "review"
+ },
+ "blocks": [
+  {"type": "stats", "title": "At a glance", "items": [
+   {"value": "6", "label": "Ranked options", "note": "Free first"},
+   {"value": "#1 gap", "label": "No events calendar", "note": "Listings exist only off-site"},
+   {"value": "2 hrs", "label": "Weekly volunteer time", "note": "Assumed, confirm"},
+   {"value": "0", "label": "Paid channels", "note": "Not recommended yet"}]},
+  {"type": "heading", "text": "Options"},
+  {"id": "options", "type": "cards", "title": "Ranked options", "items": [
+   {"title": "List every work day on community calendars", "body": "Library, community centre and the town's events page. About 20 minutes per event.\n\n**Committee provides:** dates, a short approved description, who may post.", "tags": [{"text": "High impact", "tone": "good"}, {"text": "Low effort", "tone": "neutral"}, {"text": "Free", "tone": "neutral"}]},
+   {"title": "One photo post a week", "body": "A before-and-after or a harvest photo with one line of text and the next work day.\n\n**Committee provides:** photos, approval of each post.", "tags": [{"text": "Medium impact", "tone": "neutral"}, {"text": "Low effort", "tone": "neutral"}]},
+   {"title": "A sign at the gate with a sign-up link", "body": "Weatherproof sign with the next work day and a short web address.\n\n**Committee provides:** sign budget and wording.", "tags": [{"text": "Medium impact", "tone": "neutral"}, {"text": "One-off cost", "tone": "caution"}]},
+   {"title": "Opt-in email list from work days", "body": "A paper sign-up sheet that says exactly what people will receive. Monthly email only.\n\n**Committee provides:** consent wording, who keeps the list.", "tags": [{"text": "High over time", "tone": "good"}, {"text": "Consent rules", "tone": "caution"}]},
+   {"title": "School and youth group partnerships", "body": "A one-page invitation for teachers and group leaders. Introductions only, sent by a committee member.", "tags": [{"text": "Medium, slow", "tone": "neutral"}]},
+   {"title": "Paid social ads: not now", "body": "Nothing to sell and no budget. Revisit after the first harvest festival.", "tags": [{"text": "Uncertain", "tone": "caution"}, {"text": "Paid", "tone": "bad"}]}]},
+  {"type": "table", "title": "Channels today", "rows": [
+   ["Channel", "Status", "Notes"],
+   ["Library calendar", "[[Listed|good]]", "Two past events"],
+   ["Town events page", "[[Not yet|caution]]", "Needs an account"],
+   ["Gate sign", "[[Planned]]", "Wording drafted"],
+   ["Paid ads", "[[Not recommended|bad]]", "See option 6"]]},
+  {"type": "heading", "text": "Rules"},
+  {"id": "limits", "type": "callout", "tone": "danger", "title": "Hard limits", "text": "Never email anyone who did not opt in.\nNever post photos of children without written permission from a parent or guardian."},
+  {"type": "callout", "tone": "success", "title": "Already working", "text": "The library calendar listings brought most of the new volunteers this season."},
+  {"type": "checklist", "title": "Before anything is posted", "items": [
+   {"text": "Facts checked against a source", "done": false},
+   {"text": "Photos have permission", "done": false},
+   {"text": "Committee approved the wording", "done": false}]},
+  {"type": "heading", "text": "Sources"},
+  {"type": "sources", "title": "Sources", "items": [
+   {"title": "Library community calendar (example)", "url": "https://example.org/library/events", "accessed": "2026-11-21", "group": "Listings"},
+   {"title": "Town events page (example)", "url": "https://example.org/town/events", "accessed": "2026-11-21", "group": "Listings", "note": "submission form found, not used"},
+   {"title": "Email consent guide (example)", "url": "https://example.org/consent-guide", "accessed": "2026-11-20", "group": "Rules"},
+   {"title": "Volunteer survey, October", "url": "", "accessed": "", "group": "Internal", "note": "summary supplied by the committee"}]}
+ ]
+}

@@ -81,4 +81,4 @@ Never claim `reviewed` or `approved`. Those are recorded by a person or by the s
 
 ## 5. Making a new document
 
-Write a spec and run `python helix.py build spec.json Name_v1.helix.html`. Put the next reader's instructions in `ai.notes`, point `focus` at the sections to work on and `protect` at the ones to keep. Give blocks friendly ids (`"budget"`) so the notes can refer to them. Set `"by"` to your name. See section 4 of `HELIX-guide.md` for block types.
+Write a spec and run `python helix.py build spec.json Name_v1.helix.html`. Put the next reader's instructions in `ai.notes`, point `focus` at the sections to work on and `protect` at the ones to keep. Give blocks friendly ids (`"budget"`) so the notes can refer to them. Set `"by"` to your name. For research and reports, use **stats** for headline figures, numbered **cards** for ranked options, and a **sources** block with the date each source was read. See sections 4 and 5 of `HELIX-guide.md` for block types.

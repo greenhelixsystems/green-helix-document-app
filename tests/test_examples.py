@@ -33,6 +33,15 @@ check("the example maps project data to readable blocks, not collapsibles", "col
       and [b["type"] for t in d1["tabs"] for b in t["blocks"]].count("heading") == 2)
 check("the example has AI Notes, focus, protect and an assignment", all(k in d1["ai"] for k in ("notes", "focus", "protect", "work")))
 
+# the 1.2 report-style example
+RR = str(ROOT / "examples" / "research-report"); RV = "Riverside-Garden-Outreach-Options_v1.helix.html"
+rcopy = os.path.join(T, "examples", "research-report"); shutil.rmtree(rcopy, ignore_errors=True); shutil.copytree(RR, rcopy)
+r = subprocess.run([sys.executable, os.path.join(rcopy, "make.py")], capture_output=True, text=True)
+check("research-report make.py runs", r.returncode == 0, r.stdout + r.stderr)
+check("the committed research report matches make.py's output", read(os.path.join(rcopy, RV)) == read(os.path.join(RR, RV)))
+rh = read(os.path.join(RR, RV))
+check("the research report passes check and uses the 1.2 features", hx.check_document(rh)[0] == [] and all(x in rh for x in ('class="eyebrow"', 'class="facts"', 'class="secbar"', 'class="stats"', 'class="cards"', 'class="chip t-good"', "c-danger", "c-success", 'class="sources"')))
+
 # the no-helix.py snippet in HELIX-WORKFLOW.md prints the AI Notes and only the focus block
 wf = read(str(ROOT / "guide" / "HELIX-WORKFLOW.md"))
 snippet = re.search(r"```python\n(.*?)```", wf, re.S).group(1).replace("Name_v1.2.helix.html", os.path.join(EX, V1).replace("\\", "/"))

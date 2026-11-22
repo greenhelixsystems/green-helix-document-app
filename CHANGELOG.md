@@ -2,6 +2,46 @@
 
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [semantic versioning](https://semver.org/).
 
+## [1.2.0] - 2026-11-21
+
+Report-style presentation. Everything new is optional: a file that uses none of it is byte-for-byte what 1.1 wrote, with the same revision hash. The data block says `"spec": "1.2"`.
+
+### Fixed
+- **#2:** in the editor's preview, switching tabs (and following contents or section links) showed "This content is blocked". In-page links now stay inside the preview. Saved files were never affected.
+
+### Format and rendering
+- **Stat tiles** (`stats`): a big value, a label and a small note per tile.
+- **Cards** (`cards`): one card per option, risk or recommendation, numbered for ranked lists or plain, with a Markdown body and coloured tags (`good`, `caution`, `bad`, `neutral`).
+- **Sources** (`sources`): title, link, date accessed, group and note; grouped on the page. Links that are not web addresses are shown as plain text.
+- **Status chips** in table cells: `[[Built|good]]`, `[[Planned]]`.
+- **Danger** and **Success** callout tones.
+- **Title area** (all optional): a small line above the title (`options.eyebrow`), key-fact pills under the subtitle (`options.facts`), and a large title (`options.titleSize: "large"`).
+- **Sticky section bar** (`options.nav`, off by default): links to each top-level section that stay at the top while reading. The table of contents option is unchanged; use either or both. Not printed.
+- A logo of 100 KB or less is also the browser-tab icon.
+
+### Editor
+- Stats, Cards and Sources in the Add row (it now wraps onto two lines), each with its own form: tiles, cards with tags and reordering, sources with a date picker.
+- Options panel: sticky section bar, and a Title area group (line above the title, key facts, title size).
+- **Export for AI (.zip) is removed.** The file itself is the AI format (1.1). `helix.py unpack` still writes `content.md` and the loose files for anyone who wants them; "Export all images and files" remains.
+
+### helix.py and guides
+- Every command understands the new blocks: `outline` previews them, `get --md` and `unpack` write them as Markdown, `patch` edits them.
+- Guide: the new blocks, chips, tones and settings in sections 4, 5 and 12; the workflow guide points report writers at stats, cards and sources.
+- `docs/hash-vectors.json` gains a fifth case covering the 1.2 additions.
+- `examples/research-report/`: a report in the 1.2 style, built entirely from a spec.
+
+### For apps that write Helix files
+Nothing is required: 1.1 output remains valid, and its hash is unchanged. To use the 1.2 features:
+1. Copy the 1.2 stylesheet (`DOC_CSS` in `tools/helix.py`); it adds the classes for the new blocks, chips, tones, title area and section bar.
+2. Write new settings only when used, after `about` and in this order: `eyebrow`, `facts`, `titleSize` (`"large"` only), `nav` (`true` only).
+3. Write new blocks with all of their fields: `stats` items `{value, label, note}`; `cards` with `numbered` and items `{title, body, tags: [{text, tone}]}`; `sources` items `{title, url, accessed, group, note}`.
+4. Render them with the markup in guide section 12 (*How each block is rendered*), and add the tab icon only for a logo of 100 KB or less.
+5. Reproduce all five entries in `docs/hash-vectors.json`, and confirm real exports with `helix.py hash` (`match` and `canonical`) and `helix.py check`.
+
+### Compatibility
+- 1.1 and 1.0 files open, check and save unchanged; the test suite includes a file made by the 1.1 tool.
+- 1.1 software does not know the new blocks or settings and drops them if it re-saves a 1.2 file that uses them.
+
 ## [1.1.0] - 2026-11-21
 
 AI-native documents: identity, revisions, AI Notes and work handoffs. The format stays version 1 (every 1.0 file is a valid 1.1 file); the data block now says `"spec": "1.1"`.

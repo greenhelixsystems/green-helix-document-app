@@ -254,6 +254,12 @@ A document with one tab may use `"blocks": [...]` at the top level instead of `"
 | `options.fingerprints` | `true` shows each file's SHA-256 in the file lists. The fingerprints are always saved in the data block either way. |
 | `options.about` | `true` (the default when you build) adds the collapsed "About this file" section and the matching `about` note in the data block. Leave it on unless the user says otherwise. |
 | `options.footer` | `on` shows a details line at the bottom. `author` and `version` are optional. `date` is `YYYY-MM-DD`; empty means today. |
+| `options.nav` | `true` adds a sticky section bar: links to each top-level section (headings, or titled blocks before the first heading) that stay at the top of the page while reading. Off by default. Can be used with `toc` or instead of it. Not printed. |
+| `options.eyebrow` | A small line above the title, for example `Research · 21 November 2026 · Read live on the web`. Optional. |
+| `options.facts` | A list of short strings shown as pills under the subtitle: scope, caveats, key facts. Optional. |
+| `options.titleSize` | `large` for a bigger title. Leave it out for the regular size. |
+
+The four settings above (new in 1.2) are written only when used: leave them out rather than writing `false` or empty values. A logo of 100 KB or less is also used as the browser-tab icon.
 
 ### Tabs
 
@@ -268,12 +274,17 @@ Every block except `heading` accepts `title` (optional section title) and `half`
 | `heading` | `text` | A group heading between sections. |
 | `text` | `text` or `html` | `text` is plain: blank lines separate paragraphs. `html` uses the limited tags in section 7. |
 | `markdown` | `md` | Markdown in the fixed subset in section 6. Best for anything with structure: lists, tables, emphasis, code. |
-| `callout` | `tone`, `text` | `tone` is `note`, `important` or `warning`. `text` is plain; each line is a paragraph. |
+| `callout` | `tone`, `text` | `tone` is `note`, `important`, `warning`, `danger` or `success`. `text` is plain; each line is a paragraph. |
 | `checklist` | `items`: `{"text", "done"}` | `done` defaults to `false`. Mark items done only if the input says so. |
 | `table` | `rows`: list of rows of strings | The first row is the header. Needs at least one data row. Columns of only numbers are right-aligned automatically. |
 | `collapsible` | `items`: `{"summary", "body"}` | `summary` is the clickable label; `body` is plain text. |
 | `images` | `items`: `{"file", "caption"}` (or just a path) | Optional `name`. Files must be images. |
 | `files` | `items`: `{"file", "note"}` (or just a path), plus `desc` | Optional `name` sets the download name. `desc` shows the notes; it defaults to `true` when any item has a note. |
+| `stats` | `items`: `{"value", "label", "note"}` | Stat tiles: a big `value` (number or short fact), a `label` saying what it is, an optional small `note`. Three to six tiles read best. |
+| `cards` | `items`: `{"title", "body", "tags"}`, plus `numbered` | One card per option, risk or recommendation. `body` is Markdown (section 6). `tags` is a list of `{"text", "tone"}` shown as coloured labels; `tone` is `good` (green), `caution` (amber), `bad` (red) or `neutral`. `numbered` (default `true`) shows a number in a circle, for ranked options. |
+| `sources` | `items`: `{"title", "url", "accessed", "group", "note"}` | The sources behind the document. `accessed` is the date the page was read (`YYYY-MM-DD`). Items with the same `group` are listed together under it. `url` must be a web address; anything else is shown as plain text. |
+
+**Status chips in tables.** A table cell whose whole text is `[[Label]]` or `[[Label|tone]]` shows as a small coloured label (tones as for card tags), for example `[[Built|good]]`, `[[Planned]]`. Anything else in a cell is plain text.
 
 The same file listed twice is embedded twice. List it once.
 
@@ -287,7 +298,13 @@ The same file listed twice is embedded twice. List it once.
 | Notes, emails, transcripts | **markdown** or **text** blocks. Keep the user's wording where it matters. |
 | Tasks and action items | **checklist**. |
 | Deadlines, decisions, things the reader must do | **callout** with tone `important`. |
-| Risks and cautions | **callout** with tone `warning`. |
+| Risks and cautions | **callout** with tone `warning`; hard limits that must not be crossed, tone `danger`. |
+| Confirmed results, completed checks | **callout** with tone `success`. |
+| Headline numbers or facts | **stats**, near the top. |
+| Ranked options, recommendations, risks to compare | **cards**, with tags for impact, effort or cost. Better than a table when each item needs a sentence or two. |
+| Status per row (built, planned, overdue) | **table** with status chips. |
+| Web pages and documents the content relies on | **sources**, with the date each was read. Put it last. |
+| Report scope and caveats | `options.eyebrow` and `options.facts`. |
 | Background, questions and answers | **collapsible**. |
 | Instructions for the next AI | **AI Notes** (`ai.notes`), not a block. Use `focus` and `protect` for scope. |
 
@@ -519,6 +536,12 @@ The simplest reliable path is to produce a spec and run `helix.py build`, or ope
 | collapsible | `<details><summary>Label</summary><p>...</p></details>` per item |
 | images | `<div class="gallery"><figure><details class="zoom"><summary ...><img ...></summary></details><figcaption>..</figcaption></figure></div>`; class `gallery one` for a single image |
 | files | `<div class="scroll"><table class="ft">` with a row per file: name, optional note and fingerprint, size, Download link |
+| stats | `<div class="stats"><div class="stat"><b>Value</b><span>Label</span><small>Note</small></div>...</div>` |
+| cards | `<ol class="cards">` (`cards plain` when not numbered) with `<li><span class="cn" aria-hidden="true">1</span><div><h3>Title</h3><div class="rich md">...</div></div><p class="ctags"><span class="chip t-TONE">Tag</span></p></li>` |
+| sources | `<div class="sources">` with `<h3 class="srcg">Group</h3><ul class="srcs"><li><a href="URL">Title</a> <span class="acc">accessed DATE</span> <span class="acc">· note</span></li></ul>` per group |
+| table chip | `<span class="chip t-TONE">Label</span>` inside the `<td>` |
+| title area | `<p class="eyebrow">` before the `<h1>` (`<h1 class="lg">` when large), `<ul class="facts"><li>..</li></ul>` after the subtitle |
+| section bar | `<nav class="secbar" aria-label="Sections"><a href="#s-ID">Name</a>...</nav>` at the top of each tab, before the contents box |
 
 - Two neighbouring blocks that both have `half` set share a `<div class="row2">`.
 - All text is escaped (`&`, `<`, `>`, `"`). A block with nothing to show produces no HTML but stays in the data block.

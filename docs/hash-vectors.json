@@ -241,6 +241,136 @@
    },
    "canonical": "{\"ai\":{\"focus\":[\"a2b3c4d5e6f7h\"],\"notes\":\"## For the next AI\\nRevise **Budget** only.\",\"protect\":[\"a1b2c3d4e5f6g\"],\"work\":{\"assignee\":\"Reviewer AI\",\"done\":[\"Total row present\"],\"status\":\"assigned\",\"targets\":[\"a2b3c4d5e6f7h\"],\"task\":\"T-1\"}},\"assets\":{},\"options\":{\"about\":true,\"accent\":\"green\",\"fingerprints\":false,\"footer\":{\"author\":\"\",\"date\":\"\",\"on\":false,\"version\":\"\"},\"logo\":\"\",\"status\":\"\",\"toc\":false},\"subtitle\":\"\",\"tabs\":[{\"blocks\":[{\"half\":false,\"id\":\"a1b2c3d4e5f6g\",\"md\":\"Fixed.\",\"title\":\"Goal\",\"type\":\"markdown\"},{\"half\":false,\"id\":\"a2b3c4d5e6f7h\",\"rows\":[[\"Item\",\"Cost\"],[\"\",\"\"]],\"title\":\"Budget\",\"type\":\"table\"}],\"id\":\"a0a0a0a0a0a0a\",\"title\":\"\"}],\"title\":\"Notes\"}",
    "sha256": "3eee46375d2575345de0ce52ea03af3156a0730d934484bd30ca15c33d6160d4"
+  },
+  {
+   "name": "1.2 blocks and settings",
+   "note": "Title-area settings, sticky bar, stat tiles, cards with tags, sources, a Danger callout and a status chip. Settings added in 1.2 appear only when used; every block carries all of its fields.",
+   "content": {
+    "title": "Report",
+    "subtitle": "Options",
+    "assets": {},
+    "options": {
+     "toc": false,
+     "accent": "green",
+     "footer": {
+      "on": false,
+      "author": "",
+      "version": "",
+      "date": ""
+     },
+     "logo": "",
+     "status": "",
+     "fingerprints": false,
+     "about": true,
+     "eyebrow": "Research • 21 Nov 2026",
+     "facts": [
+      "Nothing was posted",
+      "No prices quoted"
+     ],
+     "titleSize": "large",
+     "nav": true
+    },
+    "tabs": [
+     {
+      "id": "a1b2c3d4e5f6g",
+      "title": "",
+      "blocks": [
+       {
+        "id": "a2b3c4d5e6f7h",
+        "type": "stats",
+        "title": "At a glance",
+        "half": false,
+        "items": [
+         {
+          "value": "11",
+          "label": "Options",
+          "note": ""
+         },
+         {
+          "value": "#1",
+          "label": "Gap",
+          "note": "No profile"
+         }
+        ]
+       },
+       {
+        "id": "a3b4c5d6e7f8i",
+        "type": "cards",
+        "title": "Ranked options",
+        "half": false,
+        "numbered": true,
+        "items": [
+         {
+          "title": "Event listings",
+          "body": "Submit each seminar.\n\n**You provide:** copy.",
+          "tags": [
+           {
+            "text": "High impact",
+            "tone": "good"
+           },
+           {
+            "text": "Free",
+            "tone": "neutral"
+           }
+          ]
+         },
+         {
+          "title": "Paid ads",
+          "body": "Not now.",
+          "tags": [
+           {
+            "text": "Paid",
+            "tone": "bad"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "id": "a4b5c6d7e8f9j",
+        "type": "table",
+        "title": "Projects",
+        "half": false,
+        "rows": [
+         [
+          "Project",
+          "Status"
+         ],
+         [
+          "Farm",
+          "[[Built|good]]"
+         ]
+        ]
+       },
+       {
+        "id": "a5b6c7d8e9f0k",
+        "type": "callout",
+        "title": "Limit",
+        "half": false,
+        "tone": "danger",
+        "text": "Never publish a rate."
+       },
+       {
+        "id": "a6b7c8d9e0f1l",
+        "type": "sources",
+        "title": "Sources",
+        "half": false,
+        "items": [
+         {
+          "title": "CIRO",
+          "url": "https://www.ciro.ca/",
+          "accessed": "2026-11-21",
+          "group": "Compliance",
+          "note": ""
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "canonical": "{\"assets\":{},\"options\":{\"about\":true,\"accent\":\"green\",\"eyebrow\":\"Research • 21 Nov 2026\",\"facts\":[\"Nothing was posted\",\"No prices quoted\"],\"fingerprints\":false,\"footer\":{\"author\":\"\",\"date\":\"\",\"on\":false,\"version\":\"\"},\"logo\":\"\",\"nav\":true,\"status\":\"\",\"titleSize\":\"large\",\"toc\":false},\"subtitle\":\"Options\",\"tabs\":[{\"blocks\":[{\"half\":false,\"id\":\"a2b3c4d5e6f7h\",\"items\":[{\"label\":\"Options\",\"note\":\"\",\"value\":\"11\"},{\"label\":\"Gap\",\"note\":\"No profile\",\"value\":\"#1\"}],\"title\":\"At a glance\",\"type\":\"stats\"},{\"half\":false,\"id\":\"a3b4c5d6e7f8i\",\"items\":[{\"body\":\"Submit each seminar.\\n\\n**You provide:** copy.\",\"tags\":[{\"text\":\"High impact\",\"tone\":\"good\"},{\"text\":\"Free\",\"tone\":\"neutral\"}],\"title\":\"Event listings\"},{\"body\":\"Not now.\",\"tags\":[{\"text\":\"Paid\",\"tone\":\"bad\"}],\"title\":\"Paid ads\"}],\"numbered\":true,\"title\":\"Ranked options\",\"type\":\"cards\"},{\"half\":false,\"id\":\"a4b5c6d7e8f9j\",\"rows\":[[\"Project\",\"Status\"],[\"Farm\",\"[[Built|good]]\"]],\"title\":\"Projects\",\"type\":\"table\"},{\"half\":false,\"id\":\"a5b6c7d8e9f0k\",\"text\":\"Never publish a rate.\",\"title\":\"Limit\",\"tone\":\"danger\",\"type\":\"callout\"},{\"half\":false,\"id\":\"a6b7c8d9e0f1l\",\"items\":[{\"accessed\":\"2026-11-21\",\"group\":\"Compliance\",\"note\":\"\",\"title\":\"CIRO\",\"url\":\"https://www.ciro.ca/\"}],\"title\":\"Sources\",\"type\":\"sources\"}],\"id\":\"a1b2c3d4e5f6g\",\"title\":\"\"}],\"title\":\"Report\"}",
+   "sha256": "6bc6dfa27629c9313a43feda01fc41c0e0832eb4b87944f83747a893358b9e3b"
   }
  ]
 }

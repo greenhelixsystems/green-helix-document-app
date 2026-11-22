@@ -39,6 +39,19 @@ cases = [
       "tabs": [{"id": "a0a0a0a0a0a0a", "title": "", "blocks": [
           {"id": "a1b2c3d4e5f6g", "type": "markdown", "title": "Goal", "half": False, "md": "Fixed."},
           {"id": "a2b3c4d5e6f7h", "type": "table", "title": "Budget", "half": False, "rows": [["Item", "Cost"], ["", ""]]}]}]}),
+    ("1.2 blocks and settings", "Title-area settings, sticky bar, stat tiles, cards with tags, sources, a Danger callout and a status chip. "
+     "Settings added in 1.2 appear only when used; every block carries all of its fields.",
+     {"title": "Report", "subtitle": "Options", "assets": {},
+      "options": dict(OPT, eyebrow="Research \u2022 21 Nov 2026", facts=["Nothing was posted", "No prices quoted"], titleSize="large", nav=True),
+      "tabs": [{"id": "a1b2c3d4e5f6g", "title": "", "blocks": [
+          {"id": "a2b3c4d5e6f7h", "type": "stats", "title": "At a glance", "half": False, "items": [{"value": "11", "label": "Options", "note": ""}, {"value": "#1", "label": "Gap", "note": "No profile"}]},
+          {"id": "a3b4c5d6e7f8i", "type": "cards", "title": "Ranked options", "half": False, "numbered": True, "items": [
+              {"title": "Event listings", "body": "Submit each seminar.\n\n**You provide:** copy.", "tags": [{"text": "High impact", "tone": "good"}, {"text": "Free", "tone": "neutral"}]},
+              {"title": "Paid ads", "body": "Not now.", "tags": [{"text": "Paid", "tone": "bad"}]}]},
+          {"id": "a4b5c6d7e8f9j", "type": "table", "title": "Projects", "half": False, "rows": [["Project", "Status"], ["Farm", "[[Built|good]]"]]},
+          {"id": "a5b6c7d8e9f0k", "type": "callout", "title": "Limit", "half": False, "tone": "danger", "text": "Never publish a rate."},
+          {"id": "a6b7c8d9e0f1l", "type": "sources", "title": "Sources", "half": False, "items": [
+              {"title": "CIRO", "url": "https://www.ciro.ca/", "accessed": "2026-11-21", "group": "Compliance", "note": ""}]}]}]}),
 ]
 
 vectors = []
