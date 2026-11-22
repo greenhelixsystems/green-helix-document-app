@@ -38,7 +38,7 @@ def mkspec(rng):
              "<span>s</span> <em>e</em> <strong>s</strong>", "<p></p><p> </p>", "<ol><li>1<ol><li>n</li></ol></li></ol>", "line<br><br>two", "<p>a</p>b<p>c</p>"]
     def txt(): return rng.choice(["", "Plain", " Spaced ", "Two\n\nparas", "A & B < C", "é😀"])
     def block(tabfiles):
-        t = rng.choice(["heading", "text", "markdown", "table", "collapsible", "checklist", "callout", "files", "images", "text", "markdown"])
+        t = rng.choice(["heading", "text", "markdown", "table", "collapsible", "checklist", "callout", "files", "images", "text", "markdown", "stats", "cards", "sources"])
         b = {"type": t}
         if t == "heading": b["text"] = rng.choice(["Group", "", " Sp "]); return b
         b["title"] = rng.choice(["", "Title", " T & <x> ", "Éa"]); 
@@ -48,10 +48,16 @@ def mkspec(rng):
             else: b["text"] = txt()
         elif t == "markdown": b["md"] = mdtxt()
         elif t == "table":
-            w = rng.randint(1, 4); b["rows"] = [[rng.choice(["", "x", "12", "$3,400", "-7%", "a|b", "é"]) for _ in range(rng.randint(1, w))] for _ in range(rng.randint(0, 5))]
+            w = rng.randint(1, 4); b["rows"] = [[rng.choice(["", "x", "12", "$3,400", "-7%", "a|b", "é", "[[Built|good]]", " [[Planned]] ", "[[x|loud]]", "[[a]b]]", "[[ |bad]]"]) for _ in range(rng.randint(1, w))] for _ in range(rng.randint(0, 5))]
         elif t == "collapsible": b["items"] = [{"summary": rng.choice(["", "Q?", "Q & A"]), "body": rng.choice(["", "A.", "A\n\nB"])} for _ in range(rng.randint(0, 3))]
         elif t == "checklist": b["items"] = [{"text": rng.choice(["", "Do", " Do too "]), "done": rng.random() < .5} for _ in range(rng.randint(0, 4))]
-        elif t == "callout": b["tone"] = rng.choice(["note", "important", "warning", "bogus"]); b["text"] = txt()
+        elif t == "callout": b["tone"] = rng.choice(["note", "important", "warning", "danger", "success", "bogus", "constructor"]); b["text"] = txt()
+        elif t == "stats": b["items"] = [{"value": rng.choice(["", "11", "$3,400", "#1 gap"]), "label": txt(), "note": rng.choice(["", "n & <b>"])} for _ in range(rng.randint(0, 4))]
+        elif t == "cards":
+            if rng.random() < .3: b["numbered"] = rng.choice([False, True, 0, "no"])
+            b["items"] = [{"title": rng.choice(["", "Option", "A & <B>"]), "body": mdtxt(), "tags": [rng.choice([{"text": rng.choice(["High", " Low ", "", "é"]), "tone": rng.choice(["good", "caution", "bad", "neutral", "x", "constructor"])}, "bad", {"tone": "good"}]) for _ in range(rng.randint(0, 3))]} for _ in range(rng.randint(0, 3))]
+        elif t == "sources": b["items"] = [{"title": rng.choice(["", "CIRO", "A & B"]), "url": rng.choice(["", "https://example.org/a b", "example.org", "javascript:alert(1)", "mailto:x@y.z", "#s-x"]),
+                                             "accessed": rng.choice(["", "2026-11-21", "21 Nov", 5]), "group": rng.choice(["", "", "Rules", "Web"]), "note": rng.choice(["", "stale?"])} for _ in range(rng.randint(0, 4))]
         elif t == "files":
             b["desc"] = rng.random() < .6; b["items"] = [{"file": f, "note": rng.choice(["", "A note", "A & B"])} for f in rng.sample(FILES, rng.randint(0, 3))]
         elif t == "images": b["items"] = [{"file": f, "caption": rng.choice(["", "Cap", "C & <d>"])} for f in rng.sample(IMGS[:1], rng.randint(0, 1))]
@@ -59,6 +65,10 @@ def mkspec(rng):
     spec = {"title": rng.choice(["", "Doc", "A & <B>", "Éé 😀"]), "subtitle": rng.choice(["", "Sub", " S "]),
             "options": {"toc": rng.random() < .5, "accent": rng.choice(["green", "gold", "crimson", "plum", "slate", "bogus"]), "status": rng.choice(["", "draft", "review", "final", "x"]),
                         "fingerprints": rng.random() < .5, "about": rng.random() < .7}}
+    if rng.random() < .3: spec["options"]["eyebrow"] = rng.choice(["Research • 21 Nov", " ", "A & <B>", 7])
+    if rng.random() < .3: spec["options"]["facts"] = rng.choice([["Nothing sent", "No prices"], [], ["", " x "], "notalist"])
+    if rng.random() < .3: spec["options"]["titleSize"] = rng.choice(["large", "regular", "huge"])
+    if rng.random() < .4: spec["options"]["nav"] = rng.choice([True, False, "yes", 1])
     if rng.random() < .4: spec["options"]["footer"] = {"on": True, "author": rng.choice(["", "Me"]), "version": rng.choice(["", "1.2"]), "date": rng.choice(["", "2025-03-09"])}
     if len(IMGS) > 1 and rng.random() < .4: spec["options"]["logo"] = "logo.png"
     spec["tabs"] = [{"title": rng.choice(["", "One", "A & B"]), "blocks": [block(None) for _ in range(rng.randint(0, 7))]} for _ in range(rng.choice([1, 1, 2, 3]))]
@@ -89,7 +99,7 @@ with sync_playwright() as p:
     SAN_BAD = len(bad)
 
     # 2. built by Python, reopened and re-saved by the editor: must be byte-identical
-    ident = 0; n_spec = int(os.environ.get("NSPEC", "160")); first_bad = None; rng = random.Random(int(os.environ.get("SEED", "1115")) + 1); kinds = set()
+    ident = 0; n_spec = int(os.environ.get("NSPEC", "160")); first_bad = None; rng = random.Random(int(os.environ.get("SEED", "1115")) + 1); kinds = set(); md_same = 0; md_bad = None
     for k in range(n_spec):
         spec = mkspec(rng)
         # keep sanitizer-sensitive html out of the exact-equality run (measured separately above)
@@ -102,7 +112,13 @@ with sync_playwright() as p:
         ed = editor(html)
         if ed == html: ident += 1
         elif first_bad is None: first_bad = (k, spec, html, ed)
+        d_, a_ = hlx.read_document(html)[:2]; _o, pth = hlx.gather_files(d_, a_)
+        if hlx.doc_to_markdown(d_, a_, pth) == page.evaluate("window.__pde.toMd()"): md_same += 1
+        elif md_bad is None: md_bad = (k, hlx.doc_to_markdown(d_, a_, pth), page.evaluate("window.__pde.toMd()"))
     check("%d random specs: Python-built file == editor reopen+save, byte for byte" % n_spec, ident == n_spec, "%d/%d" % (ident, n_spec))
+    check("%d random specs: the Markdown export is identical in the editor and helix.py" % n_spec, md_same == n_spec, "%d/%d" % (md_same, n_spec))
+    if md_bad:
+        k, p_, e_ = md_bad; i = next((i for i in range(min(len(p_), len(e_))) if p_[i] != e_[i]), 0); print("   md spec", k, "\n   PY", repr(p_[max(0, i - 80):i + 120]), "\n   ED", repr(e_[max(0, i - 80):i + 120]))
     if first_bad:
         k, spec, h1, h2 = first_bad
         i = next((i for i in range(min(len(h1), len(h2))) if h1[i] != h2[i]), min(len(h1), len(h2)))
